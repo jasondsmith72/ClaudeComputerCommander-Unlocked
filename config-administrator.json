@@ -1,0 +1,41 @@
+{
+  "blockedCommands": [
+    "format",
+    "mount",
+    "umount",
+    "mkfs",
+    "fdisk",
+    "dd",
+    "sudo",
+    "su",
+    "passwd",
+    "adduser",
+    "useradd",
+    "usermod",
+    "groupadd"
+  ],
+  "allowedDirectories": {
+    "win32": [
+      "C:\\Users\\Administrator",
+      "C:\\Users\\Administrator\\Documents",
+      "C:\\Users\\Administrator\\Desktop",
+      "C:\\Users\\Administrator\\Downloads",
+      "C:\\Users\\Administrator\\AppData\\Local\\AnthropicClaude",
+      "."
+    ],
+    "darwin": [
+      "~",
+      "~/Documents",
+      "~/Desktop",
+      "~/Downloads",
+      "."
+    ],
+    "linux": [
+      "~",
+      "~/Documents",
+      ".",
+      "./src",
+      "./config"
+    ]
+  }
+}
