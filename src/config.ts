@@ -18,7 +18,7 @@ export const DEFAULT_ALLOWED_DIRECTORIES = [
 // Load configuration
 export interface Config {
     blockedCommands: string[];
-    allowedDirectories?: string[];
+    allowedDirectories?: string[] | Record<string, string[]>;
 }
 
 // Helper function to log to file instead of console
@@ -30,6 +30,17 @@ function logToFile(message: string): void {
     }
 }
 
+/**
+ * Expands environment variables in a string path (Windows style %VAR%)
+ * @param pathStr The path string containing environment variables
+ * @returns The expanded path
+ */
+function expandEnvVars(pathStr: string): string {
+    return pathStr.replace(/%([^%]+)%/g, (_, varName) => {
+        return process.env[varName] || '';
+    });
+}
+
 export function loadConfig(): Config {
     try {
         if (fs.existsSync(CONFIG_FILE)) {
@@ -39,23 +50,6 @@ export function loadConfig(): Config {
             // Ensure config has required fields
             if (!config.blockedCommands) {
                 config.blockedCommands = [];
-            }
-            
-            // Expand any paths with ~ to home directory and handle . for current directory
-            if (config.allowedDirectories) {
-                config.allowedDirectories = config.allowedDirectories.map(dir => {
-                    if (dir === '.' || dir === './') {
-                        return process.cwd();
-                    } else if (dir.startsWith('~/') || dir === '~') {
-                        return path.normalize(dir.replace(/^~/, os.homedir()));
-                    } else if (dir.startsWith('./')) {
-                        return path.resolve(process.cwd(), dir.slice(2));
-                    }
-                    return path.resolve(dir); // Make sure all paths are absolute
-                });
-                
-                // Log loaded directories to file instead of console
-                logToFile(`Loaded allowed directories: ${JSON.stringify(config.allowedDirectories)}`);
             }
             
             return config;
@@ -74,8 +68,54 @@ export function loadConfig(): Config {
 // Get allowed directories from config or defaults
 export function getAllowedDirectories(): string[] {
     const config = loadConfig();
-    const dirs = config.allowedDirectories || DEFAULT_ALLOWED_DIRECTORIES;
-    // Log to file instead of console
-    logToFile(`Returning allowed directories: ${JSON.stringify(dirs)}`);
+    let dirs: string[] = [];
+    
+    if (Array.isArray(config.allowedDirectories)) {
+        // Legacy format - array of directories
+        dirs = config.allowedDirectories;
+    } else if (config.allowedDirectories && typeof config.allowedDirectories === 'object') {
+        // New format - platform-specific directories
+        const platform = process.platform;
+        
+        if (config.allowedDirectories[platform]) {
+            dirs = config.allowedDirectories[platform];
+        } else {
+            // Fallback to default
+            dirs = DEFAULT_ALLOWED_DIRECTORIES;
+        }
+    } else {
+        // No configuration, use defaults
+        dirs = DEFAULT_ALLOWED_DIRECTORIES;
+    }
+    
+    // Process each directory path
+    dirs = dirs.map(dir => {
+        // Expand Windows environment variables
+        if (process.platform === 'win32' && dir.includes('%')) {
+            dir = expandEnvVars(dir);
+        }
+        
+        // Handle current directory
+        if (dir === '.' || dir === './') {
+            return process.cwd();
+        }
+        
+        // Handle home directory
+        if (dir.startsWith('~/') || dir === '~') {
+            return path.normalize(dir.replace(/^~/, os.homedir()));
+        }
+        
+        // Handle relative paths
+        if (dir.startsWith('./')) {
+            return path.resolve(process.cwd(), dir.slice(2));
+        }
+        
+        // Make sure all paths are absolute
+        return path.resolve(dir);
+    });
+    
+    // Log to file
+    logToFile(`Returning allowed directories for platform ${process.platform}: ${JSON.stringify(dirs)}`);
+    
     return dirs;
 }

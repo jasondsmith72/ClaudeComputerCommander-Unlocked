@@ -14,12 +14,30 @@
     "usermod",
     "groupadd"
   ],
-  "allowedDirectories": [
-    "~",
-    "~/Documents",
-    "~/Projects",
-    ".",
-    "./src",
-    "./config"
-  ]
+  "allowedDirectories": {
+    "win32": [
+      "C:\\Users\\%USERNAME%",
+      "C:\\Users\\%USERNAME%\\Documents",
+      "C:\\Users\\%USERNAME%\\Projects",
+      "C:\\Users\\%USERNAME%\\ClaudeComputerCommander",
+      "C:\\Users\\%USERNAME%\\ClaudeComputerCommander\\src",
+      "C:\\Users\\%USERNAME%\\ClaudeComputerCommander\\config"
+    ],
+    "darwin": [
+      "~/",
+      "~/Documents",
+      "~/Projects",
+      "~/ClaudeComputerCommander",
+      "~/ClaudeComputerCommander/src",
+      "~/ClaudeComputerCommander/config"
+    ],
+    "linux": [
+      "~/",
+      "~/Documents",
+      "~/Projects",
+      "~/ClaudeComputerCommander",
+      "~/ClaudeComputerCommander/src",
+      "~/ClaudeComputerCommander/config"
+    ]
+  }
 }

@@ -28,6 +28,7 @@ This is a fork of [wonderwhy-er/ClaudeComputerCommander](https://github.com/wond
   - Multiple file support
   - Pattern-based replacements
 - **NEW: Configurable allowed directories** - Specify which directories Claude can access
+- **NEW: Cross-platform path configuration** - Define different allowed paths for Windows, macOS, and Linux
 - **NEW: Uninstall script** - Easy removal of the tool from Claude Desktop
 - **NEW: Improved path handling** - Better support for Windows paths and relative directories
 
@@ -136,7 +137,7 @@ By default, Claude can only access:
 1. The current working directory (where the server is running from)
 2. The user's home directory
 
-You can customize this by editing the `config.json` file in the root of the project:
+You can customize this by editing the `config.json` file in the root of the project. The configuration now supports platform-specific paths:
 
 ```json
 {
@@ -146,6 +147,33 @@ You can customize this by editing the `config.json` file in the root of the proj
     "umount",
     ...
   ],
+  "allowedDirectories": {
+    "win32": [
+      "C:\\Users\\%USERNAME%",            // User's home directory with environment variable
+      "C:\\Users\\%USERNAME%\\Documents", // Documents folder
+      "C:\\Users\\%USERNAME%\\Projects",  // Projects folder
+      "C:\\path\\to\\windows\\folder"     // Any absolute path
+    ],
+    "darwin": [
+      "~/",                               // User's home directory
+      "~/Documents",                      // Documents folder
+      "~/Projects",                       // Projects folder
+      "/path/to/mac/folder"               // Any absolute path
+    ],
+    "linux": [
+      "~/",                               // User's home directory
+      "~/Documents",                      // Documents folder
+      "~/Projects",                       // Projects folder
+      "/path/to/linux/folder"             // Any absolute path
+    ]
+  }
+}
+```
+
+For backward compatibility, you can still use the simple array format:
+
+```json
+{
   "allowedDirectories": [
     "~",                 // User's home directory
     "~/Documents",       // Documents folder
@@ -162,6 +190,7 @@ You can customize this by editing the `config.json` file in the root of the proj
 - Use `.` to refer to the current working directory
 - Use `./subfolder` to refer to subdirectories of the current working directory
 - You can specify absolute paths as well
+- On Windows, you can use environment variables like `%USERNAME%` in paths
 - For security reasons, each path is validated before access is granted
 - The server now includes enhanced path validation with additional debugging
 
