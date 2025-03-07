@@ -1,4 +1,4 @@
-# Claude Desktop Commander MCP
+# Claude Desktop Commander MCP 🔓 UNRESTRICTED FILE ACCESS
 
 [![npm downloads](https://img.shields.io/npm/dw/@jasondsmith72/desktop-commander)](https://www.npmjs.com/package/@jasondsmith72/desktop-commander)
 [![GitHub Repo](https://img.shields.io/badge/GitHub-jasondsmith72%2FClaudeComputerCommander-blue)](https://github.com/jasondsmith72/ClaudeComputerCommander)
