@@ -5,7 +5,7 @@ import { getAllowedDirectories } from "../config.js";
 
 // Normalize all paths consistently
 function normalizePath(p: string): string {
-    return path.normalize(p).toLowerCase();
+    return path.normalize(p);
 }
 
 function expandHome(filepath: string): string {
@@ -20,25 +20,68 @@ export async function validatePath(requestedPath: string): Promise<string> {
     // Get the allowed directories from config
     const allowedDirectories = getAllowedDirectories();
     
+    // Log for debugging
+    console.log('Validating path:', requestedPath);
+    console.log('Against allowed directories:', allowedDirectories);
+    
     const expandedPath = expandHome(requestedPath);
     const absolute = path.isAbsolute(expandedPath)
         ? path.resolve(expandedPath)
         : path.resolve(process.cwd(), expandedPath);
-        
-    const normalizedRequested = normalizePath(absolute);
-
+    
+    // Perform case-insensitive path comparison on Windows, case-sensitive elsewhere
+    const isWindows = process.platform === 'win32';
+    
+    // Log the absolute path we're checking
+    console.log('Absolute path to check:', absolute);
+    
     // Check if path is within allowed directories
-    const isAllowed = allowedDirectories.some(dir => normalizedRequested.startsWith(normalizePath(dir)));
+    let isAllowed = false;
+    for (const dir of allowedDirectories) {
+        const normalizedDir = normalizePath(dir);
+        const normalizedPath = isWindows ? 
+            absolute.toLowerCase() : 
+            absolute;
+        const normalizedAllowed = isWindows ? 
+            normalizedDir.toLowerCase() : 
+            normalizedDir;
+        
+        if (normalizedPath === normalizedAllowed || normalizedPath.startsWith(normalizedAllowed + path.sep)) {
+            isAllowed = true;
+            console.log(`Path is allowed because it matches or is under: ${normalizedDir}`);
+            break;
+        }
+    }
+    
     if (!isAllowed) {
+        console.log('Path access DENIED');
         throw new Error(`Access denied - path outside allowed directories: ${absolute}`);
     }
 
     // Handle symlinks by checking their real path
     try {
         const realPath = await fs.realpath(absolute);
-        const normalizedReal = normalizePath(realPath);
-        const isRealPathAllowed = allowedDirectories.some(dir => normalizedReal.startsWith(normalizePath(dir)));
+        
+        // Repeat the same check for the real path
+        let isRealPathAllowed = false;
+        for (const dir of allowedDirectories) {
+            const normalizedDir = normalizePath(dir);
+            const normalizedPath = isWindows ? 
+                realPath.toLowerCase() : 
+                realPath;
+            const normalizedAllowed = isWindows ? 
+                normalizedDir.toLowerCase() : 
+                normalizedDir;
+            
+            if (normalizedPath === normalizedAllowed || normalizedPath.startsWith(normalizedAllowed + path.sep)) {
+                isRealPathAllowed = true;
+                console.log(`Real path is allowed because it matches or is under: ${normalizedDir}`);
+                break;
+            }
+        }
+        
         if (!isRealPathAllowed) {
+            console.log('Symlink target access DENIED');
             throw new Error("Access denied - symlink target outside allowed directories");
         }
         return realPath;
@@ -47,13 +90,32 @@ export async function validatePath(requestedPath: string): Promise<string> {
         const parentDir = path.dirname(absolute);
         try {
             const realParentPath = await fs.realpath(parentDir);
-            const normalizedParent = normalizePath(realParentPath);
-            const isParentAllowed = allowedDirectories.some(dir => normalizedParent.startsWith(normalizePath(dir)));
+            
+            // Check if parent directory is allowed
+            let isParentAllowed = false;
+            for (const dir of allowedDirectories) {
+                const normalizedDir = normalizePath(dir);
+                const normalizedPath = isWindows ? 
+                    realParentPath.toLowerCase() : 
+                    realParentPath;
+                const normalizedAllowed = isWindows ? 
+                    normalizedDir.toLowerCase() : 
+                    normalizedDir;
+                
+                if (normalizedPath === normalizedAllowed || normalizedPath.startsWith(normalizedAllowed + path.sep)) {
+                    isParentAllowed = true;
+                    console.log(`Parent dir is allowed because it matches or is under: ${normalizedDir}`);
+                    break;
+                }
+            }
+            
             if (!isParentAllowed) {
+                console.log('Parent directory access DENIED');
                 throw new Error("Access denied - parent directory outside allowed directories");
             }
             return absolute;
-        } catch {
+        } catch (e) {
+            console.log('Parent directory does not exist');
             throw new Error(`Parent directory does not exist: ${parentDir}`);
         }
     }
