@@ -1,0 +1,72 @@
+{
+  "blockedCommands": [
+    "format",
+    "mount",
+    "umount",
+    "mkfs",
+    "fdisk",
+    "dd",
+    "sudo",
+    "su",
+    "passwd",
+    "adduser",
+    "useradd",
+    "usermod",
+    "groupadd"
+  ],
+  "allowedDirectories": {
+    "win32": [
+      "C:\\Users\\%USERNAME%",
+      "C:\\Users\\%USERNAME%\\Documents",
+      "C:\\Users\\%USERNAME%\\Desktop",
+      "C:\\Users\\%USERNAME%\\Downloads",
+      "C:\\Users\\%USERNAME%\\Pictures",
+      "C:\\Users\\%USERNAME%\\Music",
+      "C:\\Users\\%USERNAME%\\Videos",
+      "C:\\Users\\%USERNAME%\\AppData\\Local",
+      "C:\\Users\\%USERNAME%\\AppData\\Roaming",
+      "C:",
+      "C:\\Program Files",
+      "C:\\Program Files (x86)",
+      "D:",
+      "E:",
+      "F:",
+      ".",
+      "./src",
+      "./config"
+    ],
+    "darwin": [
+      "~",
+      "~/Documents",
+      "~/Desktop",
+      "~/Downloads",
+      "~/Pictures",
+      "~/Music",
+      "~/Movies",
+      "~/Library",
+      "/",
+      "/Applications",
+      "/usr/local",
+      ".",
+      "./src",
+      "./config"
+    ],
+    "linux": [
+      "~",
+      "~/Documents",
+      "~/Desktop",
+      "~/Downloads",
+      "~/Pictures",
+      "~/Music",
+      "~/Videos",
+      "/",
+      "/home",
+      "/usr",
+      "/var",
+      "/opt",
+      ".",
+      "./src",
+      "./config"
+    ]
+  }
+}
