@@ -1,0 +1,45 @@
+{
+  "blockedCommands": [
+    "format",
+    "mount",
+    "umount",
+    "mkfs",
+    "fdisk",
+    "dd",
+    "sudo",
+    "su",
+    "passwd",
+    "adduser",
+    "useradd",
+    "usermod",
+    "groupadd"
+  ],
+  "allowedDirectories": {
+    "win32": [
+      "C:\\Users\\%USERNAME%",
+      "C:\\Users\\%USERNAME%\\Documents",
+      "C:\\Users\\%USERNAME%\\Projects",
+      "C:\\Users\\%USERNAME%\\Desktop",
+      ".",
+      "./src",
+      "./config"
+    ],
+    "darwin": [
+      "~",
+      "~/Documents",
+      "~/Projects",
+      "~/Desktop",
+      ".",
+      "./src",
+      "./config"
+    ],
+    "linux": [
+      "~",
+      "~/Documents",
+      "~/Projects",
+      ".",
+      "./src",
+      "./config"
+    ]
+  }
+}
