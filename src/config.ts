@@ -21,6 +21,15 @@ export interface Config {
     allowedDirectories?: string[];
 }
 
+// Helper function to log to file instead of console
+function logToFile(message: string): void {
+    try {
+        fs.appendFileSync(LOG_FILE, `${new Date().toISOString()} [config] ${message}\n`);
+    } catch (error) {
+        // Silent fail if unable to write to log
+    }
+}
+
 export function loadConfig(): Config {
     try {
         if (fs.existsSync(CONFIG_FILE)) {
@@ -39,18 +48,20 @@ export function loadConfig(): Config {
                         return process.cwd();
                     } else if (dir.startsWith('~/') || dir === '~') {
                         return path.normalize(dir.replace(/^~/, os.homedir()));
+                    } else if (dir.startsWith('./')) {
+                        return path.resolve(process.cwd(), dir.slice(2));
                     }
                     return path.resolve(dir); // Make sure all paths are absolute
                 });
                 
-                // Log loaded directories for debugging
-                console.log('Loaded allowed directories:', config.allowedDirectories);
+                // Log loaded directories to file instead of console
+                logToFile(`Loaded allowed directories: ${JSON.stringify(config.allowedDirectories)}`);
             }
             
             return config;
         }
     } catch (error) {
-        console.error('Error loading config:', error);
+        logToFile(`Error loading config: ${error}`);
     }
     
     // Return default config if loading fails
@@ -64,7 +75,7 @@ export function loadConfig(): Config {
 export function getAllowedDirectories(): string[] {
     const config = loadConfig();
     const dirs = config.allowedDirectories || DEFAULT_ALLOWED_DIRECTORIES;
-    // Log the directories each time they're requested
-    console.log('Returning allowed directories:', dirs);
+    // Log to file instead of console
+    logToFile(`Returning allowed directories: ${JSON.stringify(dirs)}`);
     return dirs;
 }
