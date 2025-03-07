@@ -2,6 +2,17 @@ import fs from "fs/promises";
 import path from "path";
 import os from 'os';
 import { getAllowedDirectories } from "../config.js";
+import fsSync from "fs";
+
+// Helper function to log to file instead of console
+function logToFile(message: string): void {
+    const logFile = path.join(process.cwd(), 'server.log');
+    try {
+        fsSync.appendFileSync(logFile, `${new Date().toISOString()} [filesystem] ${message}\n`);
+    } catch (error) {
+        // Silent fail if unable to write to log
+    }
+}
 
 // Normalize all paths consistently
 function normalizePath(p: string): string {
@@ -21,8 +32,8 @@ export async function validatePath(requestedPath: string): Promise<string> {
     const allowedDirectories = getAllowedDirectories();
     
     // Log for debugging
-    console.log('Validating path:', requestedPath);
-    console.log('Against allowed directories:', allowedDirectories);
+    logToFile(`Validating path: ${requestedPath}`);
+    logToFile(`Against allowed directories: ${JSON.stringify(allowedDirectories)}`);
     
     const expandedPath = expandHome(requestedPath);
     const absolute = path.isAbsolute(expandedPath)
@@ -33,7 +44,7 @@ export async function validatePath(requestedPath: string): Promise<string> {
     const isWindows = process.platform === 'win32';
     
     // Log the absolute path we're checking
-    console.log('Absolute path to check:', absolute);
+    logToFile(`Absolute path to check: ${absolute}`);
     
     // Check if path is within allowed directories
     let isAllowed = false;
@@ -48,13 +59,13 @@ export async function validatePath(requestedPath: string): Promise<string> {
         
         if (normalizedPath === normalizedAllowed || normalizedPath.startsWith(normalizedAllowed + path.sep)) {
             isAllowed = true;
-            console.log(`Path is allowed because it matches or is under: ${normalizedDir}`);
+            logToFile(`Path is allowed because it matches or is under: ${normalizedDir}`);
             break;
         }
     }
     
     if (!isAllowed) {
-        console.log('Path access DENIED');
+        logToFile(`Path access DENIED: ${absolute}`);
         throw new Error(`Access denied - path outside allowed directories: ${absolute}`);
     }
 
@@ -75,13 +86,13 @@ export async function validatePath(requestedPath: string): Promise<string> {
             
             if (normalizedPath === normalizedAllowed || normalizedPath.startsWith(normalizedAllowed + path.sep)) {
                 isRealPathAllowed = true;
-                console.log(`Real path is allowed because it matches or is under: ${normalizedDir}`);
+                logToFile(`Real path is allowed because it matches or is under: ${normalizedDir}`);
                 break;
             }
         }
         
         if (!isRealPathAllowed) {
-            console.log('Symlink target access DENIED');
+            logToFile(`Symlink target access DENIED: ${realPath}`);
             throw new Error("Access denied - symlink target outside allowed directories");
         }
         return realPath;
@@ -104,18 +115,18 @@ export async function validatePath(requestedPath: string): Promise<string> {
                 
                 if (normalizedPath === normalizedAllowed || normalizedPath.startsWith(normalizedAllowed + path.sep)) {
                     isParentAllowed = true;
-                    console.log(`Parent dir is allowed because it matches or is under: ${normalizedDir}`);
+                    logToFile(`Parent dir is allowed because it matches or is under: ${normalizedDir}`);
                     break;
                 }
             }
             
             if (!isParentAllowed) {
-                console.log('Parent directory access DENIED');
+                logToFile(`Parent directory access DENIED: ${realParentPath}`);
                 throw new Error("Access denied - parent directory outside allowed directories");
             }
             return absolute;
         } catch (e) {
-            console.log('Parent directory does not exist');
+            logToFile(`Parent directory does not exist: ${parentDir}`);
             throw new Error(`Parent directory does not exist: ${parentDir}`);
         }
     }
