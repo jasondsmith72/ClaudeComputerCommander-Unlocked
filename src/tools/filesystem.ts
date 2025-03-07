@@ -1,7 +1,7 @@
 import fs from "fs/promises";
 import path from "path";
 import os from 'os';
-import { getAllowedDirectories } from "../config.js";
+import { getAllowedDirectories, expandEnvVars } from "../config.js";
 import fsSync from "fs";
 
 // Helper function to log to file instead of console
@@ -26,6 +26,33 @@ function expandHome(filepath: string): string {
     return filepath;
 }
 
+// Check if a path is within an allowed directory
+function isPathAllowed(pathToCheck: string, allowedDirectories: string[]): boolean {
+    const isWindows = process.platform === 'win32';
+    
+    // Case sensitivity handling
+    const normalizedPath = isWindows ? pathToCheck.toLowerCase() : pathToCheck;
+    
+    for (const dir of allowedDirectories) {
+        const normalizedDir = isWindows ? dir.toLowerCase() : dir;
+        
+        // Path equality check
+        if (normalizedPath === normalizedDir) {
+            logToFile(`Path is allowed - exact match: ${pathToCheck} = ${dir}`);
+            return true;
+        }
+        
+        // Path prefix check with directory separator
+        // Ensure we have a directory separator at the end to avoid partial matches
+        if (normalizedPath.startsWith(normalizedDir + path.sep)) {
+            logToFile(`Path is allowed - subdirectory: ${pathToCheck} is under ${dir}`);
+            return true;
+        }
+    }
+    
+    return false;
+}
+
 // Security utilities
 export async function validatePath(requestedPath: string): Promise<string> {
     // Get the allowed directories from config
@@ -35,101 +62,84 @@ export async function validatePath(requestedPath: string): Promise<string> {
     logToFile(`Validating path: ${requestedPath}`);
     logToFile(`Against allowed directories: ${JSON.stringify(allowedDirectories)}`);
     
-    const expandedPath = expandHome(requestedPath);
+    // Special handling for Windows %USERNAME% if still present
+    let processedPath = requestedPath;
+    if (process.platform === 'win32' && processedPath.includes('%')) {
+        processedPath = expandEnvVars(processedPath);
+        logToFile(`Expanded environment variables: ${requestedPath} → ${processedPath}`);
+    }
+    
+    // Handle home directory expansion
+    const expandedPath = expandHome(processedPath);
+    if (expandedPath !== processedPath) {
+        logToFile(`Expanded home directory: ${processedPath} → ${expandedPath}`);
+    }
+    
+    // Resolve to absolute path
     const absolute = path.isAbsolute(expandedPath)
         ? path.resolve(expandedPath)
         : path.resolve(process.cwd(), expandedPath);
     
-    // Perform case-insensitive path comparison on Windows, case-sensitive elsewhere
-    const isWindows = process.platform === 'win32';
-    
-    // Log the absolute path we're checking
     logToFile(`Absolute path to check: ${absolute}`);
     
     // Check if path is within allowed directories
-    let isAllowed = false;
-    for (const dir of allowedDirectories) {
-        const normalizedDir = normalizePath(dir);
-        const normalizedPath = isWindows ? 
-            absolute.toLowerCase() : 
-            absolute;
-        const normalizedAllowed = isWindows ? 
-            normalizedDir.toLowerCase() : 
-            normalizedDir;
+    if (isPathAllowed(absolute, allowedDirectories)) {
+        // Path is directly allowed
+        return absolute;
+    }
+    
+    // Before rejecting, check if the path is a symlink
+    try {
+        const realPath = await fs.realpath(absolute);
+        logToFile(`Checked real path for symlink: ${absolute} → ${realPath}`);
         
-        if (normalizedPath === normalizedAllowed || normalizedPath.startsWith(normalizedAllowed + path.sep)) {
-            isAllowed = true;
-            logToFile(`Path is allowed because it matches or is under: ${normalizedDir}`);
-            break;
+        if (isPathAllowed(realPath, allowedDirectories)) {
+            logToFile(`Real path is allowed: ${realPath}`);
+            return realPath;
+        }
+    } catch (error) {
+        // If the path doesn't exist yet, check its parent directory
+        const parentDir = path.dirname(absolute);
+        logToFile(`Checking parent directory: ${parentDir}`);
+        
+        try {
+            const realParentPath = await fs.realpath(parentDir);
+            logToFile(`Real parent path: ${realParentPath}`);
+            
+            if (isPathAllowed(realParentPath, allowedDirectories)) {
+                logToFile(`Parent directory is allowed: ${realParentPath}`);
+                return absolute; // Return the original absolute path
+            }
+            
+            // Try one level higher if needed
+            const grandparentDir = path.dirname(parentDir);
+            if (grandparentDir !== parentDir) { // Avoid infinite loop at root
+                logToFile(`Checking grandparent directory: ${grandparentDir}`);
+                const realGrandparentPath = await fs.realpath(grandparentDir);
+                
+                if (isPathAllowed(realGrandparentPath, allowedDirectories)) {
+                    logToFile(`Grandparent directory is allowed: ${realGrandparentPath}`);
+                    return absolute; // Return the original absolute path
+                }
+            }
+        } catch (e) {
+            logToFile(`Error checking parent directory: ${e}`);
         }
     }
     
-    if (!isAllowed) {
-        logToFile(`Path access DENIED: ${absolute}`);
-        throw new Error(`Access denied - path outside allowed directories: ${absolute}`);
-    }
-
-    // Handle symlinks by checking their real path
-    try {
-        const realPath = await fs.realpath(absolute);
-        
-        // Repeat the same check for the real path
-        let isRealPathAllowed = false;
-        for (const dir of allowedDirectories) {
-            const normalizedDir = normalizePath(dir);
-            const normalizedPath = isWindows ? 
-                realPath.toLowerCase() : 
-                realPath;
-            const normalizedAllowed = isWindows ? 
-                normalizedDir.toLowerCase() : 
-                normalizedDir;
-            
-            if (normalizedPath === normalizedAllowed || normalizedPath.startsWith(normalizedAllowed + path.sep)) {
-                isRealPathAllowed = true;
-                logToFile(`Real path is allowed because it matches or is under: ${normalizedDir}`);
-                break;
-            }
-        }
-        
-        if (!isRealPathAllowed) {
-            logToFile(`Symlink target access DENIED: ${realPath}`);
-            throw new Error("Access denied - symlink target outside allowed directories");
-        }
-        return realPath;
-    } catch (error) {
-        // For new files that don't exist yet, verify parent directory
-        const parentDir = path.dirname(absolute);
-        try {
-            const realParentPath = await fs.realpath(parentDir);
-            
-            // Check if parent directory is allowed
-            let isParentAllowed = false;
-            for (const dir of allowedDirectories) {
-                const normalizedDir = normalizePath(dir);
-                const normalizedPath = isWindows ? 
-                    realParentPath.toLowerCase() : 
-                    realParentPath;
-                const normalizedAllowed = isWindows ? 
-                    normalizedDir.toLowerCase() : 
-                    normalizedDir;
-                
-                if (normalizedPath === normalizedAllowed || normalizedPath.startsWith(normalizedAllowed + path.sep)) {
-                    isParentAllowed = true;
-                    logToFile(`Parent dir is allowed because it matches or is under: ${normalizedDir}`);
-                    break;
-                }
-            }
-            
-            if (!isParentAllowed) {
-                logToFile(`Parent directory access DENIED: ${realParentPath}`);
-                throw new Error("Access denied - parent directory outside allowed directories");
-            }
-            return absolute;
-        } catch (e) {
-            logToFile(`Parent directory does not exist: ${parentDir}`);
-            throw new Error(`Parent directory does not exist: ${parentDir}`);
+    // Check partial matches for debugging
+    logToFile("Checking partial matches for debugging:");
+    const normalizedPath = process.platform === 'win32' ? absolute.toLowerCase() : absolute;
+    for (const dir of allowedDirectories) {
+        const normalizedDir = process.platform === 'win32' ? dir.toLowerCase() : dir;
+        if (normalizedPath.includes(normalizedDir) || normalizedDir.includes(normalizedPath)) {
+            logToFile(`Partial match found: ${absolute} vs ${dir}`);
         }
     }
+    
+    // All checks failed - path is not allowed
+    logToFile(`Path access DENIED: ${absolute}`);
+    throw new Error(`Access denied - path outside allowed directories: ${absolute}`);
 }
 
 // File operation tools
