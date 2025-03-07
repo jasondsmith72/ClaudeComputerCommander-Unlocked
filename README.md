@@ -29,6 +29,7 @@ This is a fork of [wonderwhy-er/ClaudeComputerCommander](https://github.com/wond
   - Pattern-based replacements
 - **NEW: Configurable allowed directories** - Specify which directories Claude can access
 - **NEW: Uninstall script** - Easy removal of the tool from Claude Desktop
+- **NEW: Improved path handling** - Better support for Windows paths and relative directories
 
 ## Installation
 First, ensure you've downloaded and installed the [Claude Desktop app](https://claude.ai/download) and you have [npm installed](https://docs.npmjs.com/downloading-and-installing-node-js-and-npm).
@@ -150,6 +151,7 @@ You can customize this by editing the `config.json` file in the root of the proj
     "~/Documents",       // Documents folder
     "~/Projects",        // Projects folder
     ".",                 // Current working directory
+    "./src",             // Subdirectories of current working directory
     "/path/to/folder"    // Any absolute path
   ]
 }
@@ -158,8 +160,24 @@ You can customize this by editing the `config.json` file in the root of the proj
 **Notes on allowed directories:**
 - Use `~` to refer to the user's home directory
 - Use `.` to refer to the current working directory
+- Use `./subfolder` to refer to subdirectories of the current working directory
 - You can specify absolute paths as well
 - For security reasons, each path is validated before access is granted
+- The server now includes enhanced path validation with additional debugging
+
+### Testing Directory Access
+
+You can run the included test script to verify your directory configuration:
+
+```powershell
+# First build the project
+npm run build
+
+# Then run the test script
+node test-allowed-paths.js
+```
+
+This will show which paths are allowed and denied based on your current configuration.
 
 ### Blocked Commands
 You can configure which commands are blocked by editing the `blockedCommands` array in `config.json`:
@@ -247,6 +265,17 @@ If you encounter issues setting up or using the MCP server:
 7. **Command syntax issues**: In PowerShell or Command Prompt, make sure to run each command separately on its own line. Don't combine commands like `cd ClaudeComputerCommander npm install` as this will cause errors.
 8. **Directory issues**: Ensure you're in the correct directory before running npm commands. After cloning, you must `cd` into the ClaudeComputerCommander directory.
 9. **Permission issues**: If you encounter permission errors, try running your terminal as Administrator.
+10. **Path validation issues**: Use the test script (`node test-allowed-paths.js`) to check which paths are accessible.
+
+### Path Validation Troubleshooting
+
+If Claude is having trouble accessing directories that you've added to the config:
+
+1. Make sure you've restarted the server after changing the config
+2. Check for typos in your path names
+3. On Windows, be aware of drive letter issues (e.g., `C:\Users` vs `/c/Users`)
+4. Run the test script to verify your configuration
+5. Check the server logs for detailed validation messages
 
 ## Common Installation Errors
 
