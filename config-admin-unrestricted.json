@@ -1,0 +1,37 @@
+{
+  "blockedCommands": [
+    "format",
+    "mount",
+    "umount",
+    "mkfs",
+    "fdisk",
+    "dd",
+    "sudo",
+    "su",
+    "passwd",
+    "adduser",
+    "useradd",
+    "usermod",
+    "groupadd"
+  ],
+  "allowedDirectories": [
+    "C:\\",
+    "C:\\Users",
+    "C:\\Users\\Administrator",
+    "C:\\Users\\Administrator\\Desktop",
+    "C:\\Users\\Administrator\\Documents",
+    "C:\\Users\\Administrator\\Downloads",
+    "C:\\Users\\Administrator\\AppData",
+    "C:\\Users\\Administrator\\AppData\\Local",
+    "C:\\Users\\Administrator\\AppData\\Local\\AnthropicClaude",
+    "C:\\Users\\Administrator\\AppData\\Local\\AnthropicClaude\\app-0.8.0",
+    "C:\\Program Files",
+    "C:\\Program Files (x86)",
+    "C:\\Windows",
+    "D:\\",
+    "E:\\",
+    "F:\\",
+    "~",
+    "."
+  ]
+}
