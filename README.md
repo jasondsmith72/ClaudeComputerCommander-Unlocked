@@ -37,19 +37,27 @@ First, ensure you've downloaded and installed the [Claude Desktop app](https://c
 This method is best if you don't have permissions to directly modify the Claude config file or prefer a guided approach:
 
 1. Clone the repository:
-```bash
+```powershell
 git clone https://github.com/jasondsmith72/ClaudeComputerCommander.git
+```
+
+2. Navigate to the cloned directory (IMPORTANT - make sure to do this as a separate command):
+```powershell
 cd ClaudeComputerCommander
 ```
 
-2. Install dependencies and build:
-```bash
+3. Install dependencies:
+```powershell
 npm install
+```
+
+4. Build the project:
+```powershell
 npm run build
 ```
 
-3. Run the appropriate setup script based on your needs:
-```bash
+5. Run the appropriate setup script based on your needs:
+```powershell
 # For Windows with automatic configuration:
 npm run setup:windows
 
@@ -60,12 +68,14 @@ npm run setup:custom
 npm run setup
 ```
 
-4. Follow any on-screen instructions provided by the setup script.
+6. Follow any on-screen instructions provided by the setup script.
 
-5. Restart Claude if it's running.
+7. Restart Claude if it's running.
+
+> **IMPORTANT NOTE FOR WINDOWS USERS**: Make sure to run each command separately. Do not combine commands like `cd ClaudeComputerCommander npm install` as this will cause errors. Use separate command lines for each step.
 
 ### Option 2: Add to claude_desktop_config manually
-Add this entry to your claude_desktop_config.json (on Windows, found at %APPDATA%\Claude\claude_desktop_config.json):
+Add this entry to your claude_desktop_config.json (on Windows, found at %APPDATA%\\Claude\\claude_desktop_config.json):
 ```json
 {
   "mcpServers": {
@@ -88,13 +98,13 @@ To uninstall ClaudeComputerCommander, you have two options:
 ### Option 1: Using the uninstall script (Recommended)
 
 If you have the repository locally:
-```bash
+```powershell
 cd ClaudeComputerCommander
 npm run uninstall
 ```
 
 If you've installed it globally:
-```bash
+```powershell
 npx @jasondsmith72/desktop-commander uninstall
 ```
 
@@ -106,7 +116,7 @@ This will:
 ### Option 2: Manual uninstallation
 
 1. Open your Claude Desktop configuration file:
-   - Windows: `%APPDATA%\Claude\claude_desktop_config.json`
+   - Windows: `%APPDATA%\\Claude\\claude_desktop_config.json`
    - Mac: `~/Library/Application Support/Claude/claude_desktop_config.json`
 
 2. Remove the `desktopCommander` entry from the `mcpServers` section.
@@ -114,7 +124,7 @@ This will:
 3. Restart Claude Desktop.
 
 4. If you installed the package globally, uninstall it:
-   ```bash
+   ```powershell
    npm uninstall -g @jasondsmith72/desktop-commander
    ```
 
@@ -234,6 +244,33 @@ If you encounter issues setting up or using the MCP server:
 4. Restart Claude Desktop after making changes to the config
 5. Check that your desired file paths are in the allowed directories configuration
 6. If you're getting "access denied" errors, use the `list_allowed_directories` tool to see which directories are accessible
+7. **Command syntax issues**: In PowerShell or Command Prompt, make sure to run each command separately on its own line. Don't combine commands like `cd ClaudeComputerCommander npm install` as this will cause errors.
+8. **Directory issues**: Ensure you're in the correct directory before running npm commands. After cloning, you must `cd` into the ClaudeComputerCommander directory.
+9. **Permission issues**: If you encounter permission errors, try running your terminal as Administrator.
+
+## Common Installation Errors
+
+### Error: "A positional parameter cannot be found that accepts argument 'install'"
+This occurs when you try to run multiple commands on one line. In PowerShell, run these as separate commands:
+```powershell
+# CORRECT:
+cd ClaudeComputerCommander
+npm install
+
+# INCORRECT:
+cd ClaudeComputerCommander npm install
+```
+
+### Error: "Could not read package.json: Error: ENOENT: no such file or directory"
+This happens when you try to run npm commands outside the project directory. Make sure you've navigated to the ClaudeComputerCommander directory first:
+```powershell
+# First navigate to the directory
+cd ClaudeComputerCommander
+
+# Then run npm commands
+npm install
+npm run build
+```
 
 ## Contributing
 
