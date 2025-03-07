@@ -32,14 +32,19 @@ export function loadConfig(): Config {
                 config.blockedCommands = [];
             }
             
-            // Expand any paths with ~ to home directory
+            // Expand any paths with ~ to home directory and handle . for current directory
             if (config.allowedDirectories) {
                 config.allowedDirectories = config.allowedDirectories.map(dir => {
-                    if (dir.startsWith('~')) {
-                        return dir.replace('~', os.homedir());
+                    if (dir === '.' || dir === './') {
+                        return process.cwd();
+                    } else if (dir.startsWith('~/') || dir === '~') {
+                        return path.normalize(dir.replace(/^~/, os.homedir()));
                     }
-                    return dir;
+                    return path.resolve(dir); // Make sure all paths are absolute
                 });
+                
+                // Log loaded directories for debugging
+                console.log('Loaded allowed directories:', config.allowedDirectories);
             }
             
             return config;
@@ -58,5 +63,8 @@ export function loadConfig(): Config {
 // Get allowed directories from config or defaults
 export function getAllowedDirectories(): string[] {
     const config = loadConfig();
-    return config.allowedDirectories || DEFAULT_ALLOWED_DIRECTORIES;
+    const dirs = config.allowedDirectories || DEFAULT_ALLOWED_DIRECTORIES;
+    // Log the directories each time they're requested
+    console.log('Returning allowed directories:', dirs);
+    return dirs;
 }
