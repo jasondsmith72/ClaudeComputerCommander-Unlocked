@@ -14,6 +14,8 @@ This is a fork of [wonderwhy-er/ClaudeComputerCommander](https://github.com/wond
 
 **IMPORTANT UPDATE**: This version of ClaudeComputerCommander has been modified to provide **unrestricted access to all files and drives** on your computer. Directory restrictions have been completely removed, allowing Claude to:
 
+((**Run as administraotr @ your own risk**))
+
 - Access any drive (C:, D:, etc.) and any folder on your system
 - Read and write files in any location 
 - Execute commands that interact with any part of the filesystem
