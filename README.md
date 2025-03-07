@@ -54,7 +54,7 @@ This method is best if you don't have permissions to directly modify the Claude 
 git clone https://github.com/jasondsmith72/ClaudeComputerCommander.git
 ```
 
-2. Navigate to the cloned directory (IMPORTANT - make sure to do this as a separate command):
+2. Navigate to the cloned directory 
 ```powershell
 cd ClaudeComputerCommander
 ```
@@ -85,7 +85,6 @@ npm run setup
 
 7. Restart Claude if it's running.
 
-> **IMPORTANT NOTE FOR WINDOWS USERS**: Make sure to run each command separately. Do not combine commands like `cd ClaudeComputerCommander npm install` as this will cause errors. Use separate command lines for each step.
 
 ### Option 2: Add to claude_desktop_config manually
 Add this entry to your claude_desktop_config.json (on Windows, found at %APPDATA%\\Claude\\claude_desktop_config.json):
@@ -251,29 +250,6 @@ If you're experiencing permission issues:
 3. Check if `execute_command` can access files even when direct file operations fail
 4. Try running the application with administrator privileges
 
-## Common Installation Errors
-
-### Error: "A positional parameter cannot be found that accepts argument 'install'"
-This occurs when you try to run multiple commands on one line. In PowerShell, run these as separate commands:
-```powershell
-# CORRECT:
-cd ClaudeComputerCommander
-npm install
-
-# INCORRECT:
-cd ClaudeComputerCommander npm install
-```
-
-### Error: "Could not read package.json: Error: ENOENT: no such file or directory"
-This happens when you try to run npm commands outside the project directory. Make sure you've navigated to the ClaudeComputerCommander directory first:
-```powershell
-# First navigate to the directory
-cd ClaudeComputerCommander
-
-# Then run npm commands
-npm install
-npm run build
-```
 
 ## Contributing
 
