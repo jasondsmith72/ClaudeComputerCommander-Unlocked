@@ -1,12 +1,13 @@
 # Claude Desktop Commander MCP
 
-[![npm downloads](https://img.shields.io/npm/dw/@wonderwhy-er/desktop-commander)](https://www.npmjs.com/package/@wonderwhy-er/desktop-commander)
-[![smithery badge](https://smithery.ai/badge/@wonderwhy-er/desktop-commander)](https://smithery.ai/server/@wonderwhy-er/desktop-commander)
-
+[![npm downloads](https://img.shields.io/npm/dw/@jasondsmith72/desktop-commander)](https://www.npmjs.com/package/@jasondsmith72/desktop-commander)
+[![GitHub Repo](https://img.shields.io/badge/GitHub-jasondsmith72%2FClaudeComputerCommander-blue)](https://github.com/jasondsmith72/ClaudeComputerCommander)
 
 Short version. Two key things. Terminal commands and diff based file editing.
 
-This is server that allows Claude desktop app to execute long-running terminal commands on your computer and manage processes through Model Context Protocol (MCP) + Built on top of [MCP Filesystem Server](https://github.com/modelcontextprotocol/servers/tree/main/src/filesystem) to provide additional search and replace file editing capabilities .
+This is a server that allows Claude desktop app to execute long-running terminal commands on your computer and manage processes through Model Context Protocol (MCP) + Built on top of [MCP Filesystem Server](https://github.com/modelcontextprotocol/servers/tree/main/src/filesystem) to provide additional search and replace file editing capabilities.
+
+This is a fork of [wonderwhy-er/ClaudeComputerCommander](https://github.com/wonderwhy-er/ClaudeComputerCommander) with custom setup options.
 
 ## Features
 
@@ -29,23 +30,42 @@ This is server that allows Claude desktop app to execute long-running terminal c
 ## Installation
 First, ensure you've downloaded and installed the [Claude Desktop app](https://claude.ai/download) and you have [npm installed](https://docs.npmjs.com/downloading-and-installing-node-js-and-npm).
 
-### Option 1: Installing via Smithery
+### Option 1: Custom Setup (Recommended)
+This method is best if you don't have permissions to directly modify the Claude config file or prefer a guided approach:
 
-To install Desktop Commander for Claude Desktop automatically via [Smithery](https://smithery.ai/server/@wonderwhy-er/desktop-commander):
+1. Clone the repository:
+```bash
+git clone https://github.com/jasondsmith72/ClaudeComputerCommander.git
+cd ClaudeComputerCommander
+```
+
+2. Checkout the custom-setup branch:
+```bash
+git checkout custom-setup
+```
+
+3. Run the custom setup:
+```bash
+npm run setup:custom
+```
+
+4. Follow the on-screen instructions to update your Claude config file manually.
+
+5. Restart Claude if it's running.
+
+### Option 2: Regular Setup
+If you have permissions to modify the Claude config file:
 
 ```bash
-npx -y @smithery/cli install @wonderwhy-er/desktop-commander --client claude
+git clone https://github.com/jasondsmith72/ClaudeComputerCommander.git
+cd ClaudeComputerCommander
+npm run setup
 ```
 
-### Option 2: Install trough npx
-Just run this in terminal
-```
-npx @wonderwhy-er/desktop-commander setup
-```
-Restart Claude if running
+Restart Claude if running.
 
-### Option 3: Add to claude_desktop_config by hand
-Add this entry to your claude_desktop_config.json (on Mac, found at ~/Library/Application\ Support/Claude/claude_desktop_config.json):
+### Option 3: Add to claude_desktop_config manually
+Add this entry to your claude_desktop_config.json (on Windows, found at %APPDATA%\Claude\claude_desktop_config.json):
 ```json
 {
   "mcpServers": {
@@ -53,28 +73,13 @@ Add this entry to your claude_desktop_config.json (on Mac, found at ~/Library/Ap
       "command": "npx",
       "args": [
         "-y",
-        "@wonderwhy-er/desktop-commander"
+        "@jasondsmith72/desktop-commander"
       ]
     }
   }
 }
 ```
-Restart Claude if running
-
-### Option 4: Checkout locally
-1. Clone and build:
-```bash
-git clone https://github.com/wonderwhy-er/ClaudeComputerCommander.git
-cd ClaudeComputerCommander
-npm run setup
-```
-Restart Claude if running
-
-The setup command will:
-- Install dependencies
-- Build the server
-- Configure Claude's desktop app
-- Add MCP servers to Claude's config if needed
+Restart Claude if running.
 
 ## Usage
 
@@ -138,7 +143,15 @@ This project extends the MCP Filesystem Server to enable:
 - File operations
 - Code editing with search/replace blocks
 
-Created as part of exploring Claude MCPs: https://youtube.com/live/TlbjFDbl5Us
+## Troubleshooting
+
+If you encounter issues setting up or using the MCP server:
+
+1. Check that Claude Desktop is properly installed and has been run at least once
+2. Verify that the claude_desktop_config.json file exists and is properly formatted
+3. Make sure you have the required permissions to modify the config file
+4. Restart Claude Desktop after making changes to the config
+5. Check the setup log file (setup-custom.log) for any error messages
 
 ## Contributing
 
@@ -146,7 +159,7 @@ If you find this project useful, please consider giving it a ⭐ star on GitHub!
 
 We welcome contributions from the community! Whether you've found a bug, have a feature request, or want to contribute code, here's how you can help:
 
-- **Found a bug?** Open an issue at [github.com/wonderwhy-er/ClaudeComputerCommander/issues](https://github.com/wonderwhy-er/ClaudeComputerCommander/issues)
+- **Found a bug?** Open an issue at [github.com/jasondsmith72/ClaudeComputerCommander/issues](https://github.com/jasondsmith72/ClaudeComputerCommander/issues)
 - **Have a feature idea?** Submit a feature request in the issues section
 - **Want to contribute code?** Fork the repository, create a branch, and submit a pull request
 - **Questions or discussions?** Start a discussion in the GitHub Discussions tab
