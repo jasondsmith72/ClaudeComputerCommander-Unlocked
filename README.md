@@ -10,6 +10,17 @@ This is a server that allows Claude desktop app to execute long-running terminal
 
 This is a fork of [wonderwhy-er/ClaudeComputerCommander](https://github.com/wonderwhy-er/ClaudeComputerCommander) with enhanced configuration options.
 
+## 🔓 UNRESTRICTED FILE ACCESS
+
+**IMPORTANT UPDATE**: This version of ClaudeComputerCommander has been modified to provide **unrestricted access to all files and drives** on your computer. Directory restrictions have been completely removed, allowing Claude to:
+
+- Access any drive (C:, D:, etc.) and any folder on your system
+- Read and write files in any location 
+- Execute commands that interact with any part of the filesystem
+- Navigate and modify system files and folders
+
+This provides maximum flexibility and eliminates permission errors, but please be aware that Claude will have access to all parts of your computer's filesystem. Use with appropriate caution.
+
 ## Features
 
 - Execute terminal commands with output streaming
@@ -27,10 +38,10 @@ This is a fork of [wonderwhy-er/ClaudeComputerCommander](https://github.com/wond
   - Full file rewrites for major changes
   - Multiple file support
   - Pattern-based replacements
-- **NEW: Configurable allowed directories** - Specify which directories Claude can access
-- **NEW: Cross-platform path configuration** - Define different allowed paths for Windows, macOS, and Linux
-- **NEW: Uninstall script** - Easy removal of the tool from Claude Desktop
+- **NEW: Full unrestricted filesystem access** - Access any file or folder on your computer
+- **NEW: Command-based fallbacks** - Even when direct file access fails, commands will be used as a fallback
 - **NEW: Improved path handling** - Better support for Windows paths and relative directories
+- **NEW: Cross-platform support** - Works on Windows, macOS, and Linux
 
 ## Installation
 First, ensure you've downloaded and installed the [Claude Desktop app](https://claude.ai/download) and you have [npm installed](https://docs.npmjs.com/downloading-and-installing-node-js-and-npm).
@@ -93,6 +104,21 @@ Add this entry to your claude_desktop_config.json (on Windows, found at %APPDATA
 ```
 Restart Claude if running.
 
+### Option 3: Use the all-in-one fix script (For unrestricted access)
+
+If you want to ensure full unrestricted access to all files and drives:
+
+1. After cloning the repository and navigating to the directory:
+```powershell
+node fix-all.js
+```
+
+This script will:
+- Configure unrestricted file access
+- Install all dependencies and build the project
+- Update Claude Desktop's configuration
+- Run tests to verify access works correctly
+
 ## Uninstallation
 
 To uninstall ClaudeComputerCommander, you have two options:
@@ -130,102 +156,23 @@ This will:
    npm uninstall -g @jasondsmith72/desktop-commander
    ```
 
-## Configuration
+## Unrestricted File Access
 
-### Allowed Directories
-By default, Claude can only access:
-1. The current working directory (where the server is running from)
-2. The user's home directory
+This version of ClaudeComputerCommander has been modified to provide **completely unrestricted access to all files and drives**. 
 
-You can customize this by editing the `config.json` file in the root of the project. The configuration now supports platform-specific paths:
+Key aspects of the unrestricted access:
 
-```json
-{
-  "blockedCommands": [
-    "format",
-    "mount",
-    "umount",
-    ...
-  ],
-  "allowedDirectories": {
-    "win32": [
-      "C:\\Users\\%USERNAME%",            // User's home directory with environment variable
-      "C:\\Users\\%USERNAME%\\Documents", // Documents folder
-      "C:\\Users\\%USERNAME%\\Projects",  // Projects folder
-      "C:\\path\\to\\windows\\folder"     // Any absolute path
-    ],
-    "darwin": [
-      "~/",                               // User's home directory
-      "~/Documents",                      // Documents folder
-      "~/Projects",                       // Projects folder
-      "/path/to/mac/folder"               // Any absolute path
-    ],
-    "linux": [
-      "~/",                               // User's home directory
-      "~/Documents",                      // Documents folder
-      "~/Projects",                       // Projects folder
-      "/path/to/linux/folder"             // Any absolute path
-    ]
-  }
-}
-```
+1. **No Directory Limitations**: There are no restrictions on which directories Claude can access
+2. **All Drives Accessible**: All drive letters (C:, D:, etc.) are accessible on Windows systems
+3. **Root Access**: The root directory (/) is accessible on Unix-like systems
+4. **Command Fallbacks**: If direct file operations fail, the system automatically falls back to using command execution
 
-For backward compatibility, you can still use the simple array format:
+The unrestricted access is provided through several mechanisms:
 
-```json
-{
-  "allowedDirectories": [
-    "~",                 // User's home directory
-    "~/Documents",       // Documents folder
-    "~/Projects",        // Projects folder
-    ".",                 // Current working directory
-    "./src",             // Subdirectories of current working directory
-    "/path/to/folder"    // Any absolute path
-  ]
-}
-```
-
-**Notes on allowed directories:**
-- Use `~` to refer to the user's home directory
-- Use `.` to refer to the current working directory
-- Use `./subfolder` to refer to subdirectories of the current working directory
-- You can specify absolute paths as well
-- On Windows, you can use environment variables like `%USERNAME%` in paths
-- For security reasons, each path is validated before access is granted
-- The server now includes enhanced path validation with additional debugging
-
-### Testing Directory Access
-
-You can run the included test script to verify your directory configuration:
-
-```powershell
-# First build the project
-npm run build
-
-# Then run the test script
-node test-allowed-paths.js
-```
-
-This will show which paths are allowed and denied based on your current configuration.
-
-### Blocked Commands
-You can configure which commands are blocked by editing the `blockedCommands` array in `config.json`:
-
-```json
-{
-  "blockedCommands": [
-    "format",
-    "mount",
-    "umount",
-    "mkfs",
-    "fdisk",
-    "dd",
-    "sudo",
-    "su",
-    ...
-  ]
-}
-```
+1. Configuration that allows all drives and paths
+2. Modified source code that bypasses all directory validation
+3. Command-based fallbacks that use PowerShell or shell commands when direct file operations fail
+4. Environmental variables that signal unrestricted mode to the system
 
 ## Usage
 
@@ -289,22 +236,20 @@ If you encounter issues setting up or using the MCP server:
 2. Verify that the claude_desktop_config.json file exists and is properly formatted
 3. Make sure you have the required permissions to modify the config file
 4. Restart Claude Desktop after making changes to the config
-5. Check that your desired file paths are in the allowed directories configuration
-6. If you're getting "access denied" errors, use the `list_allowed_directories` tool to see which directories are accessible
-7. **Command syntax issues**: In PowerShell or Command Prompt, make sure to run each command separately on its own line. Don't combine commands like `cd ClaudeComputerCommander npm install` as this will cause errors.
-8. **Directory issues**: Ensure you're in the correct directory before running npm commands. After cloning, you must `cd` into the ClaudeComputerCommander directory.
-9. **Permission issues**: If you encounter permission errors, try running your terminal as Administrator.
-10. **Path validation issues**: Use the test script (`node test-allowed-paths.js`) to check which paths are accessible.
+5. If you're having file access issues, try using the `fix-all.js` script to enable unrestricted access
+6. Check the log files for detailed error messages:
+   - `server.log`: General operation logs
+   - `file-operations.log`: Detailed file operation logs
+   - `test-unrestricted.log`: Results from access testing
 
-### Path Validation Troubleshooting
+### Access Troubleshooting
 
-If Claude is having trouble accessing directories that you've added to the config:
+If you're experiencing permission issues:
 
-1. Make sure you've restarted the server after changing the config
-2. Check for typos in your path names
-3. On Windows, be aware of drive letter issues (e.g., `C:\Users` vs `/c/Users`)
-4. Run the test script to verify your configuration
-5. Check the server logs for detailed validation messages
+1. Run the `fix-all.js` script to apply all unrestricted access fixes
+2. Use the `test-unrestricted.js` script to verify access works correctly
+3. Check if `execute_command` can access files even when direct file operations fail
+4. Try running the application with administrator privileges
 
 ## Common Installation Errors
 
