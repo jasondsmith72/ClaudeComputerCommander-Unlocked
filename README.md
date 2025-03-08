@@ -66,9 +66,9 @@ There are three ways to install ClaudeComputerCommander-Unlocked. All methods wi
 
 Choose the installation method that best suits your preferences:
 
-### Option 1: One-Command Installation (Recommended)
+### Option 1: One-Command Installation (Recommended) (Will install all Prerequisites)
 
-For the easiest installation experience with automatic prerequisite installation:
+For the easiest installation experience with automatic prerequisite installation: 
 
 #### Windows:
 ```
