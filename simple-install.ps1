@@ -28,13 +28,20 @@ if (-not (Test-Path $ClaudeConfigDir)) {
 }
 $ClaudeConfig = Join-Path $ClaudeConfigDir "claude_desktop_config.json"
 
-# Create Claude config file if it doesn't exist
-if (-not (Test-Path $ClaudeConfig)) {
-    Write-Host "Creating Claude Desktop configuration file..."
-    '{"mcpServers":{}}' | Out-File -FilePath $ClaudeConfig -Encoding utf8
-    Write-Host "Created new configuration file at: $ClaudeConfig"
-} else {
-    Write-Host "Using existing Claude configuration at: $ClaudeConfig"
+# Create a backup of the existing config with date/time stamp
+$BackupCreated = $false
+if (Test-Path $ClaudeConfig) {
+    $CurrentDate = Get-Date -Format "yyyy-MM-dd-HH.mm"
+    $BackupFile = Join-Path $ClaudeConfigDir "claude_desktop_config-backup-$CurrentDate.json"
+    try {
+        Copy-Item -Path $ClaudeConfig -Destination $BackupFile -Force
+        Write-Host "Created backup of existing config at: $BackupFile" -ForegroundColor Green
+        $BackupCreated = $true
+    }
+    catch {
+        Write-Host "Warning: Failed to create backup. Will proceed anyway." -ForegroundColor Yellow
+        Write-Host "Error: $_" -ForegroundColor Red
+    }
 }
 
 # First check if Node.js is already installed
@@ -191,31 +198,40 @@ node "$($RepoDir.Replace('\','\\'))\dist\index.js"
 "@ | Out-File -FilePath (Join-Path $RepoDir "start-commander.bat") -Encoding ascii
 }
 
-# Create a properly formatted JSON configuration with hard-coded format
-Write-Host "Creating Claude Desktop configuration with precise format..." -ForegroundColor Cyan
+# Create a properly formatted JSON configuration
+Write-Host "Creating Claude Desktop configuration..." -ForegroundColor Cyan
 
+# Define correct paths with proper escaping
+$IndexPath = Join-Path $RepoDir "dist\index.js"
+$IndexPath = $IndexPath.Replace('\', '\\')
+
+# Write the configuration using System.IO.File to ensure proper encoding without BOM
 if ($UseSystemNode) {
-    $correctJson = @"
+    # Prepare the minimal valid JSON for system Node.js
+    $jsonConfig = @"
 {
   "mcpServers": {
     "desktopCommander": {
       "command": "node",
       "args": [
-        "$($RepoDir.Replace('\', '\\'))\\dist\\index.js"
+        "$IndexPath"
       ]
     }
   }
 }
 "@
 } else {
-    $NodeDir = Join-Path $RepoDir "node"
-    $correctJson = @"
+    # Prepare the minimal valid JSON for portable Node.js
+    $NodeExePath = Join-Path $NodeDir "node.exe"
+    $NodeExePath = $NodeExePath.Replace('\', '\\')
+    
+    $jsonConfig = @"
 {
   "mcpServers": {
     "desktopCommander": {
-      "command": "$($NodeDir.Replace('\', '\\'))\\node.exe",
+      "command": "$NodeExePath",
       "args": [
-        "$($RepoDir.Replace('\', '\\'))\\dist\\index.js"
+        "$IndexPath"
       ]
     }
   }
@@ -223,8 +239,30 @@ if ($UseSystemNode) {
 "@
 }
 
-# Write the configuration to file with no BOM and proper encoding
-$correctJson | Out-File -FilePath $ClaudeConfig -Encoding utf8 -NoNewline
+# Use System.IO.File to write with UTF8 encoding without BOM
+try {
+    [System.IO.File]::WriteAllText($ClaudeConfig, $jsonConfig, [System.Text.Encoding]::UTF8)
+    Write-Host "Configuration file created successfully." -ForegroundColor Green
+    
+    # Validate the JSON
+    try {
+        $testJson = Get-Content -Path $ClaudeConfig -Raw | ConvertFrom-Json
+        Write-Host "JSON validation successful!" -ForegroundColor Green
+    } catch {
+        Write-Host "Warning: JSON validation failed. The file may not be properly formatted." -ForegroundColor Yellow
+        Write-Host "Error: $_" -ForegroundColor Red
+    }
+} catch {
+    Write-Host "Error creating configuration file: $_" -ForegroundColor Red
+    
+    # Fallback to the most basic JSON possible
+    try {
+        [System.IO.File]::WriteAllText($ClaudeConfig, '{"mcpServers":{}}', [System.Text.Encoding]::UTF8)
+        Write-Host "Created minimal fallback configuration." -ForegroundColor Yellow
+    } catch {
+        Write-Host "Critical error: Could not write configuration file." -ForegroundColor Red
+    }
+}
 
 Write-Host ""
 Write-Host "Installation completed successfully!" -ForegroundColor Green
@@ -242,6 +280,13 @@ Write-Host ""
 Write-Host "Claude Desktop has been configured to use this installation at:"
 Write-Host $ClaudeConfig -ForegroundColor Cyan
 Write-Host ""
+
+if ($BackupCreated) {
+    Write-Host "A backup of your previous configuration was created at:"
+    Write-Host $BackupFile -ForegroundColor Cyan
+    Write-Host ""
+}
+
 Write-Host "Please restart Claude Desktop to apply the changes."
 Write-Host "If Claude is already running, close it and start it again."
 Write-Host ""
