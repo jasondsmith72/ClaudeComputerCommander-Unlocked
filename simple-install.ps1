@@ -38,15 +38,6 @@ if (Test-Path $ClaudeConfig) {
     $BackupCreated = $true
 }
 
-# Create Claude config file if it doesn't exist
-if (-not (Test-Path $ClaudeConfig)) {
-    Write-Host "Creating Claude Desktop configuration file..."
-    '{"mcpServers":{}}' | Out-File -FilePath $ClaudeConfig -Encoding utf8
-    Write-Host "Created new configuration file at: $ClaudeConfig"
-} else {
-    Write-Host "Using existing Claude configuration at: $ClaudeConfig"
-}
-
 # First check if Node.js is already installed
 $UseSystemNode = $false
 try {
@@ -201,40 +192,38 @@ node "$($RepoDir.Replace('\','\\'))\dist\index.js"
 "@ | Out-File -FilePath (Join-Path $RepoDir "start-commander.bat") -Encoding ascii
 }
 
-# Create a properly formatted JSON configuration with hard-coded format
+# Create Claude Desktop configuration using the proper PowerShell ConvertTo-Json approach
 Write-Host "Creating Claude Desktop configuration with precise format..." -ForegroundColor Cyan
 
+# Define the correct configuration object
 if ($UseSystemNode) {
-    $correctJson = @"
-{
-  "mcpServers": {
-    "desktopCommander": {
-      "command": "node",
-      "args": [
-        "$($RepoDir.Replace('\', '\\'))\\dist\\index.js"
-      ]
+    $configObject = @{
+        mcpServers = @{
+            desktopCommander = @{
+                command = "node"
+                args = @(
+                    "$RepoDir\dist\index.js"
+                )
+            }
+        }
     }
-  }
-}
-"@
 } else {
     $NodeDir = Join-Path $RepoDir "node"
-    $correctJson = @"
-{
-  "mcpServers": {
-    "desktopCommander": {
-      "command": "$($NodeDir.Replace('\', '\\'))\\node.exe",
-      "args": [
-        "$($RepoDir.Replace('\', '\\'))\\dist\\index.js"
-      ]
+    $configObject = @{
+        mcpServers = @{
+            desktopCommander = @{
+                command = "$NodeDir\node.exe"
+                args = @(
+                    "$RepoDir\dist\index.js"
+                )
+            }
+        }
     }
-  }
-}
-"@
 }
 
-# Write the configuration to file with no BOM and proper encoding
-$correctJson | Out-File -FilePath $ClaudeConfig -Encoding utf8 -NoNewline
+# Convert object to JSON and write to file
+$jsonConfig = $configObject | ConvertTo-Json -Depth 10
+$jsonConfig | Out-File -FilePath $ClaudeConfig -Encoding utf8 -NoNewline
 
 Write-Host ""
 Write-Host "Installation completed successfully!" -ForegroundColor Green
