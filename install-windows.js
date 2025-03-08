@@ -3,14 +3,13 @@
 /**
  * All-in-one installation script for ClaudeComputerCommander-Unlocked on Windows
  * This script handles:
- * 1. Checking for prerequisites
- * 2. Installing them if missing
- * 3. Cloning the repository
- * 4. Setting up the integration with Claude Desktop
+ * 1. Checking for prerequisites and installing them if missing
+ * 2. Cloning the repository
+ * 3. Setting up the integration with Claude Desktop
  */
 
 import { execSync } from 'child_process';
-import { existsSync, mkdirSync, writeFileSync, readFileSync } from 'fs';
+import { existsSync, mkdirSync, writeFileSync, readFileSync, unlinkSync } from 'fs';
 import { join, resolve } from 'path';
 import { homedir } from 'os';
 
@@ -27,9 +26,9 @@ function log(message, level = 'INFO') {
   console.log(LOG_LEVELS[level], `[${level}] ${message}`);
 }
 
-function executeCommand(command, errorMessage) {
+function executeCommand(command, errorMessage, silent = false) {
   try {
-    return execSync(command, { stdio: 'pipe' }).toString().trim();
+    return execSync(command, { stdio: silent ? 'pipe' : 'inherit' }).toString().trim();
   } catch (error) {
     if (errorMessage) {
       log(errorMessage, 'ERROR');
@@ -39,31 +38,141 @@ function executeCommand(command, errorMessage) {
   }
 }
 
-// Check prerequisites
-async function checkPrerequisites() {
+// Install Node.js if missing
+async function installNodeJs() {
+  log('Installing Node.js...');
+  
+  // Create temp directory for downloads
+  const tempDir = join(homedir(), 'temp_node_install');
+  if (!existsSync(tempDir)) {
+    mkdirSync(tempDir, { recursive: true });
+  }
+  
+  // Download Node.js installer
+  const installerPath = join(tempDir, 'node_installer.msi');
+  log('Downloading Node.js installer (this might take a minute)...');
+  
+  executeCommand(
+    `powershell -Command "Invoke-WebRequest -Uri 'https://nodejs.org/dist/v20.11.1/node-v20.11.1-x64.msi' -OutFile '${installerPath}'"`,
+    'Failed to download Node.js installer'
+  );
+  
+  // Install Node.js with necessary tools for native modules
+  log('Installing Node.js with tools for native modules...');
+  executeCommand(
+    `msiexec.exe /i "${installerPath}" /qb ADDLOCAL=NodeRuntime,npm,DocumentationShortcuts,EnvironmentPathNode,EnvironmentPathNpmModules,AssociateJs,AssociatedFiles,NodePerfCounters INSTALLLEVEL=1 /norestart`,
+    'Failed to install Node.js'
+  );
+  
+  // Install native module tools
+  log('Installing tools for native modules via npm...');
+  executeCommand('npm install --global --production windows-build-tools', 'Note: Native module tools installation may require elevation. You might need to install manually if this fails.');
+  
+  // Clean up
+  try {
+    unlinkSync(installerPath);
+    log('Cleaned up temporary files', 'SUCCESS');
+  } catch (error) {
+    log('Failed to clean up temporary files, but installation should still proceed', 'WARN');
+  }
+  
+  // Verify installation
+  const nodeVersion = executeCommand('node --version', null, true);
+  const npmVersion = executeCommand('npm --version', null, true);
+  
+  if (nodeVersion && npmVersion) {
+    log(`Node.js ${nodeVersion} and npm ${npmVersion} installed successfully`, 'SUCCESS');
+    return true;
+  } else {
+    log('Node.js installation might have failed. Please try installing manually from https://nodejs.org/en/download/', 'ERROR');
+    return false;
+  }
+}
+
+// Install Git if missing
+async function installGit() {
+  log('Installing Git...');
+  
+  // Create temp directory for downloads
+  const tempDir = join(homedir(), 'temp_git_install');
+  if (!existsSync(tempDir)) {
+    mkdirSync(tempDir, { recursive: true });
+  }
+  
+  // Download Git installer
+  const installerPath = join(tempDir, 'git_installer.exe');
+  log('Downloading Git installer (this might take a minute)...');
+  
+  executeCommand(
+    `powershell -Command "Invoke-WebRequest -Uri 'https://github.com/git-for-windows/git/releases/download/v2.41.0.windows.3/Git-2.41.0.3-64-bit.exe' -OutFile '${installerPath}'"`,
+    'Failed to download Git installer'
+  );
+  
+  // Install Git
+  log('Installing Git...');
+  executeCommand(
+    `"${installerPath}" /VERYSILENT /NORESTART /NOCANCEL /SP- /CLOSEAPPLICATIONS /RESTARTAPPLICATIONS /COMPONENTS="icons,ext\\reg\\shellhere,assoc,assoc_sh"`,
+    'Failed to install Git'
+  );
+  
+  // Clean up
+  try {
+    unlinkSync(installerPath);
+    log('Cleaned up temporary files', 'SUCCESS');
+  } catch (error) {
+    log('Failed to clean up temporary files, but installation should still proceed', 'WARN');
+  }
+  
+  // Verify installation
+  const gitVersion = executeCommand('git --version', null, true);
+  
+  if (gitVersion) {
+    log(`Git ${gitVersion} installed successfully`, 'SUCCESS');
+    return true;
+  } else {
+    log('Git installation might have failed, but will continue without Git', 'WARN');
+    return false;
+  }
+}
+
+// Check prerequisites and install if missing
+async function checkAndInstallPrerequisites() {
   log('Checking prerequisites...');
 
   // Check for Node.js and npm
-  const nodeVersion = executeCommand('node --version');
-  if (!nodeVersion) {
-    log('Node.js is not installed or not in PATH', 'ERROR');
-    log('Please download and install Node.js from https://nodejs.org/en/download/', 'INFO');
-    process.exit(1);
+  let nodeVersion = executeCommand('node --version', null, true);
+  let npmVersion = executeCommand('npm --version', null, true);
+  
+  if (!nodeVersion || !npmVersion) {
+    log('Node.js is not installed or not in PATH', 'WARN');
+    log('Attempting to install Node.js automatically...', 'INFO');
+    
+    const nodeInstalled = await installNodeJs();
+    if (!nodeInstalled) {
+      process.exit(1);
+    }
+    
+    // Refresh versions after installation
+    nodeVersion = executeCommand('node --version', null, true);
+    npmVersion = executeCommand('npm --version', null, true);
   }
+  
   log(`Node.js ${nodeVersion} is installed`, 'SUCCESS');
-
-  const npmVersion = executeCommand('npm --version');
-  if (!npmVersion) {
-    log('npm is not installed or not in PATH', 'ERROR');
-    log('Please install npm, which usually comes with Node.js', 'INFO');
-    process.exit(1);
-  }
   log(`npm ${npmVersion} is installed`, 'SUCCESS');
 
   // Check for Git (optional)
-  const gitVersion = executeCommand('git --version');
+  let gitVersion = executeCommand('git --version', null, true);
+  let gitInstalled = !!gitVersion;
+  
   if (!gitVersion) {
-    log('Git is not installed. We will download the repository as a zip file instead.', 'WARN');
+    log('Git is not installed. Attempting to install Git automatically...', 'WARN');
+    gitInstalled = await installGit();
+    if (gitInstalled) {
+      gitVersion = executeCommand('git --version', null, true);
+      log(`Git ${gitVersion} is installed`, 'SUCCESS');
+    } else {
+      log('Will download the repository as a zip file instead', 'INFO');
+    }
   } else {
     log(`Git ${gitVersion} is installed`, 'SUCCESS');
   }
@@ -78,7 +187,7 @@ async function checkPrerequisites() {
   }
   log('Claude Desktop is installed', 'SUCCESS');
 
-  return { gitInstalled: !!gitVersion, claudeConfigPath };
+  return { gitInstalled, claudeConfigPath };
 }
 
 // Clone or download repository
@@ -213,8 +322,8 @@ async function install() {
   try {
     log('Starting ClaudeComputerCommander-Unlocked installation...');
     
-    // Step 1: Check prerequisites
-    const { gitInstalled, claudeConfigPath } = await checkPrerequisites();
+    // Step 1: Check prerequisites and install if missing
+    const { gitInstalled, claudeConfigPath } = await checkAndInstallPrerequisites();
     
     // Step 2: Clone/download repository
     const repoDir = await getRepository(gitInstalled);
