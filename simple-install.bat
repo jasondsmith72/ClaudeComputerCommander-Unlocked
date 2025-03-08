@@ -105,15 +105,41 @@ if "%USE_SYSTEM_NODE%"=="1" (
     echo "%NODE_DIR%\node.exe" "%REPO_DIR%\dist\index.js" >> "%REPO_DIR%\start-commander.bat"
 )
 
-:: 7. Use PowerShell to create a valid JSON config file
+:: 7. Create Claude configuration using direct method
 echo Updating Claude Desktop configuration...
 
-:: Create a properly formatted JSON configuration using PowerShell
-:: This ensures the JSON is valid and properly escaped
+set INDEX_PATH=%REPO_DIR%\dist\index.js
+set INDEX_PATH=%INDEX_PATH:\=\\%
+
+:: Method 1: Use echo with proper line breaks to format the JSON
 if "%USE_SYSTEM_NODE%"=="1" (
-    powershell -Command "$config = @{mcpServers = @{desktopCommander = @{command = 'node'; args = @('%REPO_DIR:\=/%/dist/index.js')}}}; ConvertTo-Json -Depth 3 $config | Set-Content -Path '%CLAUDE_CONFIG%' -Encoding UTF8"
+    (
+        echo {
+        echo   "mcpServers": {
+        echo     "desktopCommander": {
+        echo       "command": "node",
+        echo       "args": [
+        echo         "%INDEX_PATH%"
+        echo       ]
+        echo     }
+        echo   }
+        echo }
+    ) > "%CLAUDE_CONFIG%"
 ) else (
-    powershell -Command "$config = @{mcpServers = @{desktopCommander = @{command = '%NODE_DIR:\=/%/node.exe'; args = @('%REPO_DIR:\=/%/dist/index.js')}}}; ConvertTo-Json -Depth 3 $config | Set-Content -Path '%CLAUDE_CONFIG%' -Encoding UTF8"
+    set NODE_EXE_PATH=%NODE_DIR%\node.exe
+    set NODE_EXE_PATH=%NODE_EXE_PATH:\=\\%
+    (
+        echo {
+        echo   "mcpServers": {
+        echo     "desktopCommander": {
+        echo       "command": "%NODE_EXE_PATH%",
+        echo       "args": [
+        echo         "%INDEX_PATH%"
+        echo       ]
+        echo     }
+        echo   }
+        echo }
+    ) > "%CLAUDE_CONFIG%"
 )
 
 echo.
