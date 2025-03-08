@@ -75,7 +75,7 @@ The most reliable installation method using PowerShell:
 #### For PowerShell:
 ```powershell
 # Run in PowerShell
-iwr https://raw.githubusercontent.com/jasondsmith72/ClaudeComputerCommander-Unlocked/main/simple-install.ps1 -OutFile simple-install.ps1; .\simple-install.ps1
+iwr https://raw.githubusercontent.com/jasondsmith72/ClaudeComputerCommander-Unlocked/main/simple-install.ps1 -OutFile simple-install.ps1; ./simple-install.ps1
 ```
 
 This script:
@@ -92,7 +92,7 @@ If you encounter any issues with Claude Desktop configuration, use these quick r
 #### For PowerShell:
 ```powershell
 # Run in PowerShell
-iwr https://raw.githubusercontent.com/jasondsmith72/ClaudeComputerCommander-Unlocked/main/fix-json-config.ps1 -OutFile fix-json-config.ps1; .\fix-json-config.ps1
+iwr https://raw.githubusercontent.com/jasondsmith72/ClaudeComputerCommander-Unlocked/main/fix-json-config.ps1 -OutFile fix-json-config.ps1; ./fix-json-config.ps1
 ```
 
 These repair tools will:
