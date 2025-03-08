@@ -70,8 +70,21 @@ Choose the installation method that best suits your preferences:
 
 The absolute simplest, most foolproof installation method:
 
-```
+#### For Command Prompt (CMD):
+```cmd
 curl -s https://raw.githubusercontent.com/jasondsmith72/ClaudeComputerCommander-Unlocked/main/simple-install.bat -o simple-install.bat && simple-install.bat
+```
+
+#### For PowerShell:
+```powershell
+# Run in PowerShell
+Invoke-WebRequest -Uri "https://raw.githubusercontent.com/jasondsmith72/ClaudeComputerCommander-Unlocked/main/simple-install.bat" -OutFile "simple-install.bat"; ./simple-install.bat
+```
+
+#### PowerShell (Short Version):
+```powershell
+# Run in PowerShell
+iwr https://raw.githubusercontent.com/jasondsmith72/ClaudeComputerCommander-Unlocked/main/simple-install.bat -OutFile simple-install.bat; ./simple-install.bat
 ```
 
 This batch file:
@@ -85,8 +98,15 @@ This batch file:
 
 Standard installation with more features:
 
-```
+#### For Command Prompt (CMD):
+```cmd
 curl -s https://raw.githubusercontent.com/jasondsmith72/ClaudeComputerCommander-Unlocked/main/direct-install.bat -o direct-install.bat && direct-install.bat
+```
+
+#### For PowerShell:
+```powershell
+# Run in PowerShell
+Invoke-WebRequest -Uri "https://raw.githubusercontent.com/jasondsmith72/ClaudeComputerCommander-Unlocked/main/direct-install.bat" -OutFile "direct-install.bat"; ./direct-install.bat
 ```
 
 This batch file:
@@ -100,8 +120,15 @@ This batch file:
 
 If you want a more thorough installation that can help you install Claude if needed:
 
-```
+#### For Command Prompt (CMD):
+```cmd
 curl -s https://raw.githubusercontent.com/jasondsmith72/ClaudeComputerCommander-Unlocked/main/force-install.bat -o force-install.bat && force-install.bat
+```
+
+#### For PowerShell:
+```powershell
+# Run in PowerShell
+Invoke-WebRequest -Uri "https://raw.githubusercontent.com/jasondsmith72/ClaudeComputerCommander-Unlocked/main/force-install.bat" -OutFile "force-install.bat"; ./force-install.bat
 ```
 
 This script:
@@ -115,8 +142,15 @@ This script:
 
 If you're having trouble and want to diagnose Claude configuration issues:
 
-```
+#### For Command Prompt (CMD):
+```cmd
 curl -s https://raw.githubusercontent.com/jasondsmith72/ClaudeComputerCommander-Unlocked/main/find-claude-config.bat -o find-claude-config.bat && find-claude-config.bat
+```
+
+#### For PowerShell:
+```powershell
+# Run in PowerShell
+Invoke-WebRequest -Uri "https://raw.githubusercontent.com/jasondsmith72/ClaudeComputerCommander-Unlocked/main/find-claude-config.bat" -OutFile "find-claude-config.bat"; ./find-claude-config.bat
 ```
 
 This script will:
@@ -149,8 +183,7 @@ Invoke-WebRequest -Uri "https://raw.githubusercontent.com/jasondsmith72/ClaudeCo
 ```
 
 #### Windows (Command Prompt):
-```
-# Run in Command Prompt
+```cmd
 curl -s https://raw.githubusercontent.com/jasondsmith72/ClaudeComputerCommander-Unlocked/main/install-windows.js -o install-windows.js & node install-windows.js
 ```
 
