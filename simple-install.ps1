@@ -1,5 +1,5 @@
 # ClaudeComputerCommander-Unlocked PowerShell Installer
-# This script prioritizes existing Node.js installation
+# This script prioritizes existing Node.js installation and fixes JSON config
 
 Write-Host "ClaudeComputerCommander-Unlocked PowerShell Installer"
 Write-Host "================================================"
@@ -183,37 +183,48 @@ if ($UseSystemNode) {
 @echo off
 node "$($RepoDir.Replace('\','\\'))\dist\index.js"
 "@ | Out-File -FilePath (Join-Path $RepoDir "start-commander.bat") -Encoding ascii
-
-    # Update Claude configuration for system Node.js
-    $ClaudeJsonConfig = @{
-        mcpServers = @{
-            desktopCommander = @{
-                command = "node"
-                args = @("$($RepoDir.Replace('\','\\'))\dist\index.js")
-            }
-        }
-    }
 } else {
     $NodeDir = Join-Path $RepoDir "node"
     @"
 @echo off
 "$($NodeDir.Replace('\','\\'))\node.exe" "$($RepoDir.Replace('\','\\'))\dist\index.js"
 "@ | Out-File -FilePath (Join-Path $RepoDir "start-commander.bat") -Encoding ascii
-
-    # Update Claude configuration for local Node.js
-    $ClaudeJsonConfig = @{
-        mcpServers = @{
-            desktopCommander = @{
-                command = "$($NodeDir.Replace('\','\\'))\node.exe"
-                args = @("$($RepoDir.Replace('\','\\'))\dist\index.js")
-            }
-        }
-    }
 }
 
-# Save Claude configuration
-Write-Host "Updating Claude Desktop configuration..."
-$ClaudeJsonConfig | ConvertTo-Json -Depth 10 | Out-File -FilePath $ClaudeConfig -Encoding utf8
+# Create a properly formatted JSON configuration with hard-coded format
+Write-Host "Creating Claude Desktop configuration with precise format..." -ForegroundColor Cyan
+
+if ($UseSystemNode) {
+    $correctJson = @"
+{
+  "mcpServers": {
+    "desktopCommander": {
+      "command": "node",
+      "args": [
+        "$($RepoDir.Replace('\', '\\'))\\dist\\index.js"
+      ]
+    }
+  }
+}
+"@
+} else {
+    $NodeDir = Join-Path $RepoDir "node"
+    $correctJson = @"
+{
+  "mcpServers": {
+    "desktopCommander": {
+      "command": "$($NodeDir.Replace('\', '\\'))\\node.exe",
+      "args": [
+        "$($RepoDir.Replace('\', '\\'))\\dist\\index.js"
+      ]
+    }
+  }
+}
+"@
+}
+
+# Write the configuration to file with no BOM and proper encoding
+$correctJson | Out-File -FilePath $ClaudeConfig -Encoding utf8 -NoNewline
 
 Write-Host ""
 Write-Host "Installation completed successfully!" -ForegroundColor Green
@@ -226,10 +237,10 @@ if ($UseSystemNode) {
 }
 Write-Host ""
 Write-Host "The ClaudeComputerCommander-Unlocked has been installed to:"
-Write-Host $RepoDir
+Write-Host $RepoDir -ForegroundColor Cyan
 Write-Host ""
 Write-Host "Claude Desktop has been configured to use this installation at:"
-Write-Host $ClaudeConfig
+Write-Host $ClaudeConfig -ForegroundColor Cyan
 Write-Host ""
 Write-Host "Please restart Claude Desktop to apply the changes."
 Write-Host "If Claude is already running, close it and start it again."
