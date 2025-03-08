@@ -1,77 +1,10 @@
-# ClaudeComputerCommander JSON Config Repair Tool
-# This script fixes common JSON syntax issues in Claude Desktop configuration
+# ClaudeComputerCommander Configuration Guide
+# This script generates instructions for configuring Claude Desktop
 
-Write-Host "Claude Desktop Configuration Repair Tool"
+Write-Host "Claude Desktop Configuration Guide"
 Write-Host "========================================"
-Write-Host "This tool will fix JSON syntax errors in your Claude Desktop configuration"
-Write-Host "and ensure proper formatting for the ClaudeComputerCommander"
+Write-Host "This tool will help you configure Claude Desktop to use ClaudeComputerCommander"
 Write-Host ""
-
-# Find Claude config directory and file
-$ClaudeConfigDir = Join-Path $env:APPDATA "Claude"
-
-# Common locations where Claude config might be found
-$possibleLocations = @(
-    (Join-Path $env:APPDATA "Claude"),
-    (Join-Path $env:LOCALAPPDATA "Claude"),
-    (Join-Path $env:USERPROFILE "AppData\Roaming\Claude"),
-    (Join-Path $env:USERPROFILE "AppData\Local\Claude"),
-    (Join-Path $env:USERPROFILE "AppData\Local\Programs\Claude"),
-    (Join-Path $env:USERPROFILE "Documents\Claude"),
-    (Join-Path $env:USERPROFILE "Desktop"),
-    (Join-Path $env:USERPROFILE "OneDrive\Desktop"),
-    (Join-Path $env:HOMEDRIVE "\Claude")
-)
-
-# Search for the config file in all possible locations
-$configFileName = "claude_desktop_config.json"
-$ClaudeConfig = $null
-
-foreach ($location in $possibleLocations) {
-    $potentialPath = Join-Path $location $configFileName
-    if (Test-Path $potentialPath) {
-        $ClaudeConfig = $potentialPath
-        Write-Host "Found existing Claude configuration at: $ClaudeConfig" -ForegroundColor Green
-        $ClaudeConfigDir = Split-Path $ClaudeConfig -Parent
-        break
-    }
-}
-
-# If not found, try to create it in default location
-if (-not $ClaudeConfig) {
-    Write-Host "No existing configuration found. Will create one in the default location." -ForegroundColor Yellow
-    
-    # Try AppData first
-    $ClaudeConfigDir = Join-Path $env:APPDATA "Claude"
-    if (-not (Test-Path $ClaudeConfigDir)) {
-        try {
-            New-Item -ItemType Directory -Path $ClaudeConfigDir -Force | Out-Null
-            Write-Host "Created Claude config directory at: $ClaudeConfigDir" -ForegroundColor Green
-        } catch {
-            # If creating in AppData fails, use Desktop as fallback
-            Write-Host "Could not create directory in AppData, will use Desktop instead." -ForegroundColor Yellow
-            $ClaudeConfigDir = [System.Environment]::GetFolderPath('Desktop')
-        }
-    }
-    
-    # Set the config path
-    $ClaudeConfig = Join-Path $ClaudeConfigDir $configFileName
-    Write-Host "Will create configuration at: $ClaudeConfig" -ForegroundColor Yellow
-}
-
-# Create a backup with date/time stamp
-$BackupCreated = $false
-if (Test-Path $ClaudeConfig) {
-    $Timestamp = Get-Date -Format "yyyy-MM-dd-HH.mm"
-    $BackupFile = [System.IO.Path]::ChangeExtension($ClaudeConfig, "bk-$Timestamp.json")
-    try {
-        Copy-Item -Path $ClaudeConfig -Destination $BackupFile -Force
-        Write-Host "Created backup of existing config at: $BackupFile" -ForegroundColor Green
-        $BackupCreated = $true
-    } catch {
-        Write-Host "Failed to create backup: $_" -ForegroundColor Red
-    }
-}
 
 # Find installation directory of ClaudeComputerCommander
 $potentialInstallPaths = @(
@@ -93,18 +26,12 @@ foreach ($path in $potentialInstallPaths) {
 }
 
 if (-not $RepoDir) {
-    $RepoDir = Join-Path $env:USERPROFILE "ClaudeComputerCommander-Unlocked"
-    Write-Host "Using default installation path: $RepoDir" -ForegroundColor Yellow
-    
-    # Create the directory if it doesn't exist
-    if (-not (Test-Path $RepoDir)) {
-        try {
-            New-Item -ItemType Directory -Path $RepoDir -Force | Out-Null
-            Write-Host "Created installation directory: $RepoDir" -ForegroundColor Green
-        } catch {
-            Write-Host "Failed to create installation directory: $_" -ForegroundColor Red
-        }
-    }
+    Write-Host "Could not find ClaudeComputerCommander installation!" -ForegroundColor Red
+    Write-Host "Please run the installer first." -ForegroundColor Red
+    Write-Host ""
+    Write-Host "Press any key to exit..."
+    $null = $Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown")
+    exit
 }
 
 # Check for node.exe
@@ -121,65 +48,103 @@ try {
         $NodeDir = Join-Path $RepoDir "node"
         Write-Host "Found portable Node.js at: $NodePath" -ForegroundColor Green
     } else {
-        Write-Host "No Node.js installation found. Will configure for system Node.js anyway." -ForegroundColor Yellow
+        Write-Host "No Node.js installation found. Will use 'node' command anyway." -ForegroundColor Yellow
     }
 }
 
-# Create configuration JSON with hardcoded content to prevent any formatting issues
-Write-Host "Creating clean JSON configuration file..." -ForegroundColor Cyan
+# Prepare path information for manual configuration
+$ConfigPath = $RepoDir
+if ($UseSystemNode) {
+    $NodePath = "node"
+} else {
+    $NodePath = Join-Path $NodeDir "node.exe"
+}
+$IndexPath = Join-Path $RepoDir "dist\index.js"
 
-# Prepare the installation path with proper escaping for JSON
-$EscapedRepoDir = $RepoDir.Replace('\', '\\')
-$NodePath = if ($UseSystemNode) { "node" } else { "$($NodeDir.Replace('\', '\\'))\\node.exe" }
+# Display configuration instructions
+Write-Host ""
+Write-Host "*** IMPORTANT: YOU MUST MANUALLY CONFIGURE CLAUDE DESKTOP ***" -ForegroundColor Magenta
+Write-Host ""
+Write-Host "Please follow these steps:" -ForegroundColor Yellow
+Write-Host "1. Open Claude Desktop" -ForegroundColor Yellow
+Write-Host "2. Click Settings (gear icon) in the bottom left" -ForegroundColor Yellow
+Write-Host "3. Go to the Developer tab" -ForegroundColor Yellow
+Write-Host "4. Click Edit next to MCP Servers" -ForegroundColor Yellow
+Write-Host "5. Paste the following configuration:" -ForegroundColor Yellow
+Write-Host ""
 
-# Create JSON content as a plain string
-$jsonText = @"
+$configJson = @"
 {
   "mcpServers": {
     "desktopCommander": {
-      "command": "$NodePath",
+      "command": "$($NodePath.Replace('\', '\\'))",
       "args": [
-        "$EscapedRepoDir\\dist\\index.js"
+        "$($IndexPath.Replace('\', '\\'))"
       ]
     }
   }
 }
 "@
 
-# Write to file using .NET directly to avoid PowerShell encoding issues
-try {
-    [System.IO.File]::WriteAllText($ClaudeConfig, $jsonText, [System.Text.Encoding]::UTF8)
-    Write-Host "Successfully created configuration file without BOM encoding." -ForegroundColor Green
-} catch {
-    Write-Host "Error writing configuration file: $_" -ForegroundColor Red
-    
-    # Fallback method if .NET method fails
-    try {
-        $jsonText | Out-File -FilePath $ClaudeConfig -Encoding utf8 -NoNewline
-        Write-Host "Used PowerShell Out-File as fallback method." -ForegroundColor Yellow
-    } catch {
-        Write-Host "All file writing methods failed. Cannot create configuration file." -ForegroundColor Red
+Write-Host $configJson -ForegroundColor Cyan
+Write-Host ""
+Write-Host "6. Click Save" -ForegroundColor Yellow
+Write-Host "7. Restart Claude Desktop" -ForegroundColor Yellow
+Write-Host ""
+
+# Create configuration readme
+$readmeText = @"
+# ClaudeComputerCommander-Unlocked Configuration Instructions
+
+## Configuration Steps
+
+1. Open Claude Desktop application
+2. Click on Settings (gear icon) in the bottom left
+3. Go to the "Developer" tab
+4. Click "Edit" next to "MCP Servers"
+5. Paste the following configuration:
+
+\`\`\`json
+{
+  "mcpServers": {
+    "desktopCommander": {
+      "command": "$($NodePath.Replace('\', '\\'))",
+      "args": [
+        "$($IndexPath.Replace('\', '\\'))"
+      ]
     }
+  }
 }
+\`\`\`
 
-Write-Host ""
-Write-Host "Configuration repair completed successfully!" -ForegroundColor Green
-Write-Host ""
-Write-Host "The ClaudeComputerCommander is configured to use installation at:"
-Write-Host $RepoDir -ForegroundColor Cyan
-Write-Host ""
-Write-Host "Claude Desktop will use configuration at:"
-Write-Host $ClaudeConfig -ForegroundColor Cyan
-Write-Host ""
+6. Click "Save"
+7. Restart Claude Desktop
 
-if ($BackupCreated) {
-    Write-Host "A backup of your previous configuration was created at:"
-    Write-Host $BackupFile -ForegroundColor Cyan
-    Write-Host ""
-}
+## Installation Details
 
-Write-Host "Please restart Claude Desktop to apply the changes."
-Write-Host "If Claude is already running, close it and start it again."
+- Installation Directory: $RepoDir
+- Node.js Path: $($NodePath)
+- Index.js Path: $IndexPath
+
+## Using the Commander
+
+After configuration, you can ask Claude to:
+- Execute terminal commands
+- Edit files
+- Manage files
+- List processes
+
+## Troubleshooting
+
+If you encounter any issues:
+- Make sure paths in the configuration match your actual installation
+- Verify that Claude Desktop has been restarted
+- Check for any error messages in Claude Desktop
+"@
+
+$readmeText | Out-File -FilePath (Join-Path $RepoDir "CONFIGURATION.md") -Encoding utf8
+Write-Host "Detailed instructions have been saved to:" -ForegroundColor Green 
+Write-Host "$(Join-Path $RepoDir "CONFIGURATION.md")" -ForegroundColor Cyan
 Write-Host ""
 Write-Host "Press any key to exit..."
 $null = $Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown")
