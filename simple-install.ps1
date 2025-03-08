@@ -41,32 +41,126 @@ if (-not (Test-Path $ClaudeConfig)) {
 # Always attempt to install Node.js system-wide first, regardless of whether it's already installed
 $UseSystemNode = $false
 
+# Function to attempt winget installation
+function Install-Winget {
+    Write-Host "Attempting to install App Installer (winget)..." -ForegroundColor Cyan
+    
+    # Check if Windows version supports winget (Windows 10 1809 or later)
+    $win10 = (Get-WmiObject -class Win32_OperatingSystem).Caption -match 'Windows 10|Windows 11'
+    if (-not $win10) {
+        Write-Host "Winget requires Windows 10 1809 or later. Your system may not be supported." -ForegroundColor Yellow
+        return $false
+    }
+    
+    # Try to install App Installer through Microsoft Store
+    try {
+        Write-Host "Attempting to open Microsoft Store to install App Installer..." -ForegroundColor Cyan
+        Start-Process "ms-windows-store://pdp/?ProductId=9NBLGGH4NNS1" -Wait -ErrorAction SilentlyContinue
+        
+        Write-Host "Waiting 15 seconds for potential installation to complete..." -ForegroundColor Cyan
+        Start-Sleep -Seconds 15
+        
+        # Check if winget is now available
+        try {
+            $null = & winget --version
+            Write-Host "App Installer (winget) installed successfully via Microsoft Store!" -ForegroundColor Green
+            return $true
+        } catch {
+            # Microsoft Store method failed, try direct download
+        }
+    } catch {
+        # Microsoft Store method failed, try direct download
+    }
+    
+    Write-Host "Microsoft Store installation method failed. Trying direct download..." -ForegroundColor Yellow
+    
+    try {
+        # Create temp directory
+        $tempDir = Join-Path $env:TEMP "winget_install"
+        if (-not (Test-Path $tempDir)) {
+            New-Item -ItemType Directory -Path $tempDir -Force | Out-Null
+        }
+        
+        # Download latest App Installer from GitHub
+        $appInstallerUrl = "https://github.com/microsoft/winget-cli/releases/latest/download/Microsoft.DesktopAppInstaller_8wekyb3d8bbwe.msixbundle"
+        $appInstallerPath = Join-Path $tempDir "AppInstaller.msixbundle"
+        
+        Write-Host "Downloading App Installer from GitHub..." -ForegroundColor Cyan
+        Invoke-WebRequest -Uri $appInstallerUrl -OutFile $appInstallerPath
+        
+        # Also need the dependencies for offline installation
+        $vcLibsUrl = "https://aka.ms/Microsoft.VCLibs.x64.14.00.Desktop.appx"
+        $vcLibsPath = Join-Path $tempDir "VCLibs.appx"
+        
+        Write-Host "Downloading required VCLibs dependency..." -ForegroundColor Cyan
+        Invoke-WebRequest -Uri $vcLibsUrl -OutFile $vcLibsPath
+        
+        # Install VCLibs dependency first
+        Write-Host "Installing VCLibs dependency..." -ForegroundColor Cyan
+        Add-AppxPackage -Path $vcLibsPath -ErrorAction SilentlyContinue
+        
+        # Install App Installer
+        Write-Host "Installing App Installer..." -ForegroundColor Cyan
+        Add-AppxPackage -Path $appInstallerPath -ErrorAction SilentlyContinue
+        
+        # Clean up
+        Remove-Item -Path $tempDir -Recurse -Force -ErrorAction SilentlyContinue
+        
+        # Verify winget installation
+        try {
+            $null = & winget --version
+            Write-Host "App Installer (winget) installed successfully via direct download!" -ForegroundColor Green
+            return $true
+        } catch {
+            Write-Host "Failed to install winget via direct download." -ForegroundColor Red
+            return $false
+        }
+    } catch {
+        Write-Host "Error during winget direct installation: $_" -ForegroundColor Red
+        return $false
+    }
+}
+
 # Try to install Node.js using winget if available
 if ($isAdmin) {
     Write-Host "Attempting to install Node.js system-wide..." -ForegroundColor Cyan
     
+    # Check if winget is available
+    $wingetInstalled = $false
     try {
-        # Check if winget is available
-        $wingetVersion = winget --version
-        Write-Host "Winget found ($wingetVersion). Installing Node.js LTS..." -ForegroundColor Cyan
-        
-        # Run winget install command
-        winget install OpenJS.NodeJS.LTS -e --source winget
-        
-        # Verify installation
-        $env:Path = [System.Environment]::GetEnvironmentVariable("Path","Machine") + ";" + [System.Environment]::GetEnvironmentVariable("Path","User")
-        try {
-            $NodeVersion = node --version
-            Write-Host "Node.js $NodeVersion installed successfully with winget." -ForegroundColor Green
-            $UseSystemNode = $true
-        } catch {
-            Write-Host "Winget installation completed but Node.js is not in PATH yet." -ForegroundColor Yellow
-            Write-Host "Will configure for system Node.js - you may need to restart your computer later." -ForegroundColor Yellow
-            $UseSystemNode = $true
-        }
+        $wingetVersion = & winget --version
+        Write-Host "Winget found ($wingetVersion)." -ForegroundColor Green
+        $wingetInstalled = $true
     } catch {
-        Write-Host "Winget is not available. Attempting direct MSI installation..." -ForegroundColor Yellow
-        
+        Write-Host "Winget not found. Attempting to install it..." -ForegroundColor Yellow
+        $wingetInstalled = Install-Winget
+    }
+    
+    if ($wingetInstalled) {
+        # Install Node.js using winget
+        Write-Host "Installing Node.js LTS using winget..." -ForegroundColor Cyan
+        try {
+            & winget install OpenJS.NodeJS.LTS -e --source winget
+            
+            # Verify installation
+            $env:Path = [System.Environment]::GetEnvironmentVariable("Path","Machine") + ";" + [System.Environment]::GetEnvironmentVariable("Path","User")
+            try {
+                $NodeVersion = & node --version
+                Write-Host "Node.js $NodeVersion installed successfully with winget." -ForegroundColor Green
+                $UseSystemNode = $true
+            } catch {
+                Write-Host "Winget installation completed but Node.js is not in PATH yet." -ForegroundColor Yellow
+                Write-Host "Will configure for system Node.js - you may need to restart your computer later." -ForegroundColor Yellow
+                $UseSystemNode = $true
+            }
+        } catch {
+            Write-Host "Error installing Node.js with winget: $_" -ForegroundColor Red
+            Write-Host "Falling back to MSI installation method..." -ForegroundColor Yellow
+        }
+    }
+    
+    # If winget installation failed, try direct MSI installation
+    if (-not $UseSystemNode) {
         try {
             # Create temp directory for MSI
             $TempDir = Join-Path $env:TEMP "node_install"
@@ -87,7 +181,7 @@ if ($isAdmin) {
                 # Verify installation after MSI installer runs
                 $env:Path = [System.Environment]::GetEnvironmentVariable("Path","Machine") + ";" + [System.Environment]::GetEnvironmentVariable("Path","User")
                 try {
-                    $NodeVersion = node --version
+                    $NodeVersion = & node --version
                     Write-Host "Node.js $NodeVersion installed successfully via MSI." -ForegroundColor Green
                     $UseSystemNode = $true
                 } catch {
@@ -97,7 +191,7 @@ if ($isAdmin) {
                 }
                 
                 # Clean up
-                Remove-Item -Path $NodeMsiPath -Force
+                Remove-Item -Path $NodeMsiPath -Force -ErrorAction SilentlyContinue
             } else {
                 Write-Host "Failed to download Node.js MSI installer." -ForegroundColor Red
                 Write-Host "Will fall back to portable installation." -ForegroundColor Yellow
