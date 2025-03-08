@@ -1,11 +1,5 @@
 # ClaudeComputerCommanderUnlocked
 
-Short version. Two key things. Terminal commands and diff based file editing.
-
-This is a server that allows Claude desktop app to execute long-running terminal commands on your computer and manage processes through Model Context Protocol (MCP) + Built on top of MCP Filesystem Server to provide additional search and replace file editing capabilities.
-
-This is a fork of wonderwhy-er/ClaudeComputerCommander with enhanced configuration options.
-
 ## 🔓 UNRESTRICTED FILE ACCESS
 
 IMPORTANT UPDATE: This version of ClaudeComputerCommander has been modified to provide unrestricted access to all files and drives on your computer. Directory restrictions have been completely removed, allowing Claude to:
@@ -18,6 +12,12 @@ IMPORTANT UPDATE: This version of ClaudeComputerCommander has been modified to p
 * Navigate and modify system files and folders
 
 This provides maximum flexibility and eliminates permission errors, but please be aware that Claude will have access to all parts of your computer's filesystem. Use with appropriate caution.
+
+Short version. Two key things. Terminal commands and diff based file editing.
+
+This is a server that allows Claude desktop app to execute long-running terminal commands on your computer and manage processes through Model Context Protocol (MCP) + Built on top of MCP Filesystem Server to provide additional search and replace file editing capabilities.
+
+This is a fork of wonderwhy-er/ClaudeComputerCommander with enhanced configuration options.
 
 ## Features
 
