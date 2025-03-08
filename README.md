@@ -58,11 +58,17 @@ You'll need the following prerequisites, but don't worry - our one-command insta
 
 ## Installation
 
-The easiest way to install is using our one-command installation option, which handles everything automatically including installing any missing prerequisites (except Claude Desktop).
+There are three ways to install ClaudeComputerCommander-Unlocked. All methods will:
+- Download the necessary code
+- Install required dependencies
+- Configure Claude Desktop to use the commander
+- Create backups of your existing configuration
+
+Choose the installation method that best suits your preferences:
 
 ### Option 1: One-Command Installation (Recommended)
 
-For the easiest installation experience:
+For the easiest installation experience with automatic prerequisite installation:
 
 #### Windows:
 ```
@@ -74,52 +80,34 @@ curl -s https://raw.githubusercontent.com/jasondsmith72/ClaudeComputerCommander-
 curl -s https://raw.githubusercontent.com/jasondsmith72/ClaudeComputerCommander-Unlocked/main/install-mac-linux.js -o install-mac-linux.js && node install-mac-linux.js
 ```
 
-These scripts will:
-1. Check for prerequisites and install them if missing (Node.js with native module tools, Git)
-2. Clone the repository
-3. Install dependencies
-4. Set up the integration with Claude Desktop
-5. Guide you through the configuration process
+### Option 2: Guided Auto-Install
 
-### Option 2: Guided Auto-Install 
-
-This method uses the repository's built-in setup scripts:
+This method provides an interactive setup experience:
 
 1. Clone the repository:
-
 ```
 git clone https://github.com/jasondsmith72/ClaudeComputerCommander-Unlocked.git
-```
-
-2. Navigate to the cloned directory
-
-```
 cd ClaudeComputerCommander-Unlocked
-```
-
-3. Install dependencies
-
-```
 npm install
 ```
 
-4. Run the guided setup script (works on both Windows and macOS/Linux):
-
+2. Run the guided setup script:
 ```
 node setup-claude-custom.js
 ```
-
-The script will automatically detect your OS, create backups of existing configurations, and guide you through the setup process.
 
 ### Option 3: Direct Installation
 
 For users who prefer a direct installation without prompts:
 
+1. Clone and install dependencies:
 ```
 git clone https://github.com/jasondsmith72/ClaudeComputerCommander-Unlocked.git
 cd ClaudeComputerCommander-Unlocked
 npm install
 ```
+
+2. Run the appropriate setup script:
 
 For Windows:
 ```
@@ -133,20 +121,17 @@ node setup-claude-server.js
 
 ### Upgrading from a Previous Version
 
-If you're upgrading from a previous version of ClaudeComputerCommander:
+If you're upgrading from a previous version:
 
 1. Uninstall the old version first:
    ```
-   # Navigate to your ORIGINAL ClaudeComputerCommander directory
    cd path/to/your/original/ClaudeComputerCommander
-   
-   # Run the uninstall script
    node uninstall.js
    ```
 
-2. Follow the installation steps above for the new version
+2. Follow any of the installation methods above for the new version
 
-### Configuration Files
+## Configuration Options
 
 Several pre-configured setup options are available:
 
@@ -156,43 +141,26 @@ Several pre-configured setup options are available:
 - `config-improved.json`: Enhanced capabilities without full unrestricted access
 - `config-simple.json`: Basic functionality for simple use cases
 
-#### How to Use Configuration Files
+By default, all installation methods use `config-unrestricted.json`.
 
-By default:
-- The guided auto-installer will use `config-unrestricted.json` as the default configuration
-- The direct installation scripts also use `config-unrestricted.json` by default
+### Changing Configuration
 
 To use a different configuration:
 
 1. After installation, copy your preferred configuration to `config.json`:
    ```
-   # For example, to use the administrator configuration:
    cp config-administrator.json config.json
    ```
 
-2. If the server is already running, restart it or restart Claude Desktop
+2. Restart Claude Desktop to apply the changes
 
-3. If you want to switch configurations later:
-   ```
-   # First, make a backup of your current config
-   cp config.json config-backup.json
-   
-   # Then copy the new configuration
-   cp config-improved.json config.json
-   ```
-
-Each configuration offers different security and capability levels:
-- `config-unrestricted.json`: No filesystem restrictions, allowing access to any file
-- `config-administrator.json`: Elevated permissions with some filesystem restrictions
-- `config-admin-unrestricted.json`: Most powerful option with admin privileges + unrestricted access
-- `config-improved.json`: Enhanced capabilities with reasonable security restrictions
-- `config-simple.json`: Most restrictive with limited access to secure directories only
+Each configuration offers different security and capability levels, from completely unrestricted access to more limited secure options.
 
 ### Uninstalling
 
-To uninstall ClaudeComputerCommander-Unlocked:
+To uninstall:
 
-1. Navigate to your ClaudeComputerCommander-Unlocked directory:
+1. Navigate to your installation directory:
    ```
    cd path/to/ClaudeComputerCommander-Unlocked
    ```
@@ -202,18 +170,12 @@ To uninstall ClaudeComputerCommander-Unlocked:
    node uninstall.js
    ```
 
-3. The script will automatically:
-   - Find your Claude Desktop configuration
-   - Create a backup of the current config
-   - Remove the ClaudeComputerCommander entries
-   - Save the updated configuration
-
-4. After uninstalling, you can safely delete the directory if desired:
+3. Optionally remove the directory:
    ```
-   # Optional: Remove the directory (Windows)
+   # Windows
    rmdir /s /q ClaudeComputerCommander-Unlocked
    
-   # Optional: Remove the directory (macOS/Linux)
+   # macOS/Linux
    rm -rf ClaudeComputerCommander-Unlocked
    ```
 
