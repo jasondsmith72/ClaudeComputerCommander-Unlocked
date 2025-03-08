@@ -1,5 +1,5 @@
 @echo off
-setlocal enabledelayedexpansion
+setlocal EnableDelayedExpansion
 
 :: ClaudeComputerCommander-Unlocked Minimal Installer
 :: This script installs winget first if needed, then Node.js
@@ -19,10 +19,14 @@ if %errorlevel% neq 0 (
 )
 
 :: 1. Create the ClaudeComputerCommander directory first (needed regardless of Node.js method)
-set REPO_DIR=%USERPROFILE%\ClaudeComputerCommander-Unlocked
+set "REPO_DIR=%USERPROFILE%\ClaudeComputerCommander-Unlocked"
 if not exist "%REPO_DIR%" mkdir "%REPO_DIR%"
-cd "%REPO_DIR%"
+cd /d "%REPO_DIR%"
 echo Created installation directory at: %REPO_DIR%
+
+:: Set NODE_INSTALLED and USE_SYSTEM_NODE variables
+set "NODE_INSTALLED=0"
+set "USE_SYSTEM_NODE=0"
 
 :: Check if winget is already available
 winget --version >nul 2>&1
@@ -91,7 +95,6 @@ if %errorlevel% neq 0 (
 
 :try_node_installation
 :: Try installation methods in sequence - winget, msi, direct download
-set "NODE_INSTALLED=0"
 
 :: Method 1: Check if winget is available and try to install Node.js
 winget --version >nul 2>&1
@@ -161,7 +164,7 @@ if %NODE_INSTALLED% equ 0 (
     echo Using portable Node.js installation method...
     
     :: Download Node.js executable directly (not the full package)
-    set NODE_DIR=%REPO_DIR%\node
+    set "NODE_DIR=%REPO_DIR%\node"
     mkdir "%NODE_DIR%" 2>nul
     
     echo Downloading Node.js executable...
@@ -187,10 +190,10 @@ echo.
 echo Setting up Claude integration...
 
 :: Create Claude config directory and file
-set CLAUDE_CONFIG_DIR=%APPDATA%\Claude
+set "CLAUDE_CONFIG_DIR=%APPDATA%\Claude"
 if not exist "%CLAUDE_CONFIG_DIR%" mkdir "%CLAUDE_CONFIG_DIR%"
 
-set CLAUDE_CONFIG=%CLAUDE_CONFIG_DIR%\claude_desktop_config.json
+set "CLAUDE_CONFIG=%CLAUDE_CONFIG_DIR%\claude_desktop_config.json"
 
 :: Create Claude config file if it doesn't exist
 if not exist "%CLAUDE_CONFIG%" (
@@ -228,7 +231,7 @@ if "%USE_SYSTEM_NODE%"=="1" (
 echo Updating Claude Desktop configuration...
 
 :: Create a temp file for the JSON content
-set TEMP_JSON=%TEMP%\claude_config_temp.json
+set "TEMP_JSON=%TEMP%\claude_config_temp.json"
 if "%USE_SYSTEM_NODE%"=="1" (
     echo {> "%TEMP_JSON%"
     echo   "mcpServers": {>> "%TEMP_JSON%"
