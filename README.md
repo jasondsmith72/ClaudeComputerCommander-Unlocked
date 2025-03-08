@@ -44,25 +44,46 @@ This provides maximum flexibility and eliminates permission errors, but please b
 
 ## Prerequisites
 
-Before installing ClaudeComputerCommander-Unlocked, make sure you have the following prerequisites installed:
+You'll need the following prerequisites, but don't worry - our one-command installers will automatically install them if they're missing:
 
 1. **Claude Desktop App** - Download and install from [Anthropic's website](https://claude.ai/downloads)
-2. **Node.js and npm** - Version 16 or higher:
-   - [Download for Windows](https://nodejs.org/en/download/) - Choose the LTS version
-   - [Download for macOS](https://nodejs.org/en/download/) - Choose the LTS version
-   - Linux: Use your package manager (apt, yum, etc.) or [download from nodejs.org](https://nodejs.org/en/download/)
-3. **Git** (optional, only required if you plan to clone the repository):
-   - [Download for Windows](https://git-scm.com/download/win)
-   - macOS: Install via Homebrew with `brew install git` or [download installer](https://git-scm.com/download/mac)
-   - Linux: Use your package manager (e.g., `apt install git` or `yum install git`)
+   - This is the only prerequisite you must install manually
+   - The installation scripts will check if Claude Desktop is installed
+
+2. **Node.js and npm** - Required but will be automatically installed if missing
+   - The installer will set up Node.js with the tools for compiling native modules
+
+3. **Git** - Optional, will be automatically installed if missing
+   - If Git can't be installed, the scripts will download the repository as a ZIP file
 
 ## Installation
 
-First, ensure you've downloaded and installed the Claude Desktop app and have npm installed as mentioned in the prerequisites.
+The easiest way to install is using our one-command installation option, which handles everything automatically including installing any missing prerequisites (except Claude Desktop).
 
-### Option 1: Guided Auto-Install (Recommended for All Operating Systems)
+### Option 1: One-Command Installation (Recommended)
 
-This method automatically detects your operating system and provides a guided setup:
+For the easiest installation experience:
+
+#### Windows:
+```
+curl -s https://raw.githubusercontent.com/jasondsmith72/ClaudeComputerCommander-Unlocked/main/install-windows.js -o install-windows.js && node install-windows.js
+```
+
+#### macOS/Linux:
+```
+curl -s https://raw.githubusercontent.com/jasondsmith72/ClaudeComputerCommander-Unlocked/main/install-mac-linux.js -o install-mac-linux.js && node install-mac-linux.js
+```
+
+These scripts will:
+1. Check for prerequisites and install them if missing (Node.js with native module tools, Git)
+2. Clone the repository
+3. Install dependencies
+4. Set up the integration with Claude Desktop
+5. Guide you through the configuration process
+
+### Option 2: Guided Auto-Install 
+
+This method uses the repository's built-in setup scripts:
 
 1. Clone the repository:
 
@@ -90,7 +111,7 @@ node setup-claude-custom.js
 
 The script will automatically detect your OS, create backups of existing configurations, and guide you through the setup process.
 
-### Option 2: Direct Installation
+### Option 3: Direct Installation
 
 For users who prefer a direct installation without prompts:
 
@@ -109,27 +130,6 @@ For macOS/Linux:
 ```
 node setup-claude-server.js
 ```
-
-### Option 3: One-Command Installation
-
-For the easiest installation experience, use the all-in-one install script that handles everything automatically:
-
-#### Windows:
-```
-curl -s https://raw.githubusercontent.com/jasondsmith72/ClaudeComputerCommander-Unlocked/main/install-windows.js -o install-windows.js && node install-windows.js
-```
-
-#### macOS/Linux:
-```
-curl -s https://raw.githubusercontent.com/jasondsmith72/ClaudeComputerCommander-Unlocked/main/install-mac-linux.js -o install-mac-linux.js && node install-mac-linux.js
-```
-
-These scripts will:
-1. Check for prerequisites and install them if missing
-2. Clone the repository
-3. Install dependencies
-4. Set up the integration with Claude Desktop
-5. Guide you through the configuration process
 
 ### Upgrading from a Previous Version
 
