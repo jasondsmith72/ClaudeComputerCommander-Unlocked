@@ -1,5 +1,5 @@
 # ClaudeComputerCommander-Unlocked PowerShell Installer
-# This script prioritizes existing Node.js installation and fixes JSON config
+# This script properly fetches the complete repository, installs dependencies, and configures Claude Desktop
 
 Write-Host "ClaudeComputerCommander-Unlocked PowerShell Installer"
 Write-Host "================================================"
@@ -13,37 +13,56 @@ if (-not $isAdmin) {
     Write-Host ""
 }
 
-# Create installation directories
+# Set installation directory
 $RepoDir = Join-Path $env:USERPROFILE "ClaudeComputerCommander-Unlocked"
-if (-not (Test-Path $RepoDir)) {
-    New-Item -ItemType Directory -Path $RepoDir -Force | Out-Null
+Write-Host "Installing to: $RepoDir" -ForegroundColor Cyan
+
+# Create/clean installation directory
+if (Test-Path $RepoDir) {
+    Write-Host "Existing installation found. Creating backup..." -ForegroundColor Yellow
+    $timestamp = Get-Date -Format "yyyyMMdd-HHmmss"
+    $backupDir = "${RepoDir}-backup-${timestamp}"
+    Move-Item -Path $RepoDir -Destination $backupDir
+    Write-Host "Backed up to: $backupDir" -ForegroundColor Green
 }
+
+New-Item -ItemType Directory -Path $RepoDir -Force | Out-Null
 Set-Location $RepoDir
 Write-Host "Created installation directory at: $RepoDir"
 
-# Create Claude config directory and file
-$ClaudeConfigDir = Join-Path $env:APPDATA "Claude"
-if (-not (Test-Path $ClaudeConfigDir)) {
-    New-Item -ItemType Directory -Path $ClaudeConfigDir -Force | Out-Null
+# Locate Claude Desktop configuration
+$possibleConfigDirs = @(
+    (Join-Path $env:APPDATA "Claude"),
+    (Join-Path $env:USERPROFILE "OneDrive\Desktop"),
+    (Join-Path $env:USERPROFILE "Desktop"),
+    (Join-Path $env:LOCALAPPDATA "Claude")
+)
+
+$ClaudeConfig = $null
+$configFileName = "claude_desktop_config.json"
+
+# First look for existing config file
+foreach ($dir in $possibleConfigDirs) {
+    $configPath = Join-Path $dir $configFileName
+    if (Test-Path $configPath) {
+        $ClaudeConfig = $configPath
+        $ClaudeConfigDir = $dir
+        Write-Host "Found existing Claude Desktop configuration at: $ClaudeConfig" -ForegroundColor Green
+        break
+    }
 }
-$ClaudeConfig = Join-Path $ClaudeConfigDir "claude_desktop_config.json"
 
-# Determine desktop location as a fallback for config
-$DesktopPath = [System.Environment]::GetFolderPath('Desktop')
-$OneDrivePath = Join-Path $env:USERPROFILE "OneDrive\Desktop"
-$DesktopConfigPath = Join-Path $DesktopPath "claude_desktop_config.json"
-$OneDriveConfigPath = Join-Path $OneDrivePath "claude_desktop_config.json"
-
-# Check if Desktop or OneDrive Desktop config exists instead of AppData location
-if (Test-Path $DesktopConfigPath) {
-    Write-Host "Found config on Desktop, will use that location instead of AppData" -ForegroundColor Yellow
-    $ClaudeConfig = $DesktopConfigPath
-} elseif (Test-Path $OneDriveConfigPath) {
-    Write-Host "Found config on OneDrive Desktop, will use that location instead of AppData" -ForegroundColor Yellow
-    $ClaudeConfig = $OneDriveConfigPath
+# If not found, create in default location
+if (-not $ClaudeConfig) {
+    $ClaudeConfigDir = Join-Path $env:APPDATA "Claude"
+    if (-not (Test-Path $ClaudeConfigDir)) {
+        New-Item -ItemType Directory -Path $ClaudeConfigDir -Force | Out-Null
+    }
+    $ClaudeConfig = Join-Path $ClaudeConfigDir $configFileName
+    Write-Host "Will create Claude Desktop configuration at: $ClaudeConfig" -ForegroundColor Yellow
 }
 
-# Check if config exists and create a backup with date/time stamp
+# Create backup of existing config
 $BackupCreated = $false
 if (Test-Path $ClaudeConfig) {
     $Timestamp = Get-Date -Format "yyyy-MM-dd-HH.mm"
@@ -53,7 +72,7 @@ if (Test-Path $ClaudeConfig) {
     $BackupCreated = $true
 }
 
-# First check if Node.js is already installed
+# Check for Node.js
 $UseSystemNode = $false
 try {
     $NodeVersion = & node --version
@@ -162,6 +181,13 @@ if (-not $UseSystemNode) {
         Write-Host "Downloading portable Node.js executable..." -ForegroundColor Cyan
         Invoke-WebRequest -Uri "https://nodejs.org/dist/v20.11.1/win-x64/node.exe" -OutFile (Join-Path $NodeDir "node.exe")
         Write-Host "Successfully downloaded Node.js executable to $NodeDir\node.exe" -ForegroundColor Green
+        
+        # Download npm
+        Write-Host "Downloading npm files..." -ForegroundColor Cyan
+        Invoke-WebRequest -Uri "https://nodejs.org/dist/v20.11.1/node_modules.zip" -OutFile (Join-Path $NodeDir "node_modules.zip")
+        Expand-Archive -Path (Join-Path $NodeDir "node_modules.zip") -DestinationPath $NodeDir -Force
+        Remove-Item -Path (Join-Path $NodeDir "node_modules.zip") -Force -ErrorAction SilentlyContinue
+        Write-Host "Successfully downloaded npm." -ForegroundColor Green
     } catch {
         Write-Host "Failed to download Node.js executable: $_" -ForegroundColor Red
         Write-Host "Please download it manually from: https://nodejs.org/dist/v20.11.1/win-x64/node.exe" -ForegroundColor Red
@@ -172,28 +198,184 @@ if (-not $UseSystemNode) {
     }
 }
 
-# Create config.json
-Write-Host "Creating server configuration..."
-'{\"allowedDirectories\":[\"*\"],\"allowedCommands\":[\"*\"]}' | Out-File -FilePath (Join-Path $RepoDir "config.json") -Encoding utf8
-
-# Create the dist directory and a minimal server script
-$DistDir = Join-Path $RepoDir "dist"
-if (-not (Test-Path $DistDir)) {
-    New-Item -ItemType Directory -Path $DistDir -Force | Out-Null
+# Check if Git is installed
+$hasGit = $false
+try {
+    $gitVersion = & git --version
+    Write-Host "Git found: $gitVersion" -ForegroundColor Green
+    $hasGit = $true
+} catch {
+    Write-Host "Git not found. Will download repository as ZIP instead." -ForegroundColor Yellow
 }
 
-$ServerScript = @"
-// Minimal ClaudeComputerCommander Server
-console.log('ClaudeComputerCommander is running...');
-const fs = require('fs');
-const path = require('path');
-const config = require('../config.json');
-console.log('Config loaded:', config);
-console.log('Server is ready to handle commands');
-"@
-$ServerScript | Out-File -FilePath (Join-Path $DistDir "index.js") -Encoding utf8
+# Clone or download repository
+if ($hasGit) {
+    # Clone repository
+    Write-Host "Cloning ClaudeComputerCommander-Unlocked repository..." -ForegroundColor Cyan
+    try {
+        & git clone https://github.com/jasondsmith72/ClaudeComputerCommander-Unlocked.git $RepoDir
+        Write-Host "Repository cloned successfully." -ForegroundColor Green
+    } catch {
+        Write-Host "Failed to clone repository: $_" -ForegroundColor Red
+        Write-Host "Will download as ZIP instead..." -ForegroundColor Yellow
+        $hasGit = $false
+    }
+}
 
-# Create startup script
+if (-not $hasGit) {
+    # Download as ZIP
+    Write-Host "Downloading repository ZIP..." -ForegroundColor Cyan
+    $zipUrl = "https://github.com/jasondsmith72/ClaudeComputerCommander-Unlocked/archive/main.zip"
+    $zipPath = Join-Path $env:TEMP "ClaudeComputerCommander-Unlocked.zip"
+    $extractPath = Join-Path $env:TEMP "ClaudeComputerCommander-Unlocked-extract"
+    
+    try {
+        # Download
+        Invoke-WebRequest -Uri $zipUrl -OutFile $zipPath
+        
+        # Create extraction directory
+        if (Test-Path $extractPath) { Remove-Item -Path $extractPath -Recurse -Force }
+        New-Item -ItemType Directory -Path $extractPath -Force | Out-Null
+        
+        # Extract
+        Expand-Archive -Path $zipPath -DestinationPath $extractPath -Force
+        
+        # Move contents to repo directory
+        $extractedDir = Join-Path $extractPath "ClaudeComputerCommander-Unlocked-main"
+        if (Test-Path $extractedDir) {
+            Get-ChildItem -Path $extractedDir | Copy-Item -Destination $RepoDir -Recurse -Force
+        } else {
+            Write-Host "Unexpected extraction path. Searching for files..." -ForegroundColor Yellow
+            $possibleDirs = Get-ChildItem -Path $extractPath -Directory
+            if ($possibleDirs.Count -gt 0) {
+                Get-ChildItem -Path $possibleDirs[0].FullName | Copy-Item -Destination $RepoDir -Recurse -Force
+            } else {
+                Write-Host "Failed to locate extracted files." -ForegroundColor Red
+            }
+        }
+        
+        # Clean up
+        Remove-Item -Path $zipPath -Force -ErrorAction SilentlyContinue
+        Remove-Item -Path $extractPath -Recurse -Force -ErrorAction SilentlyContinue
+        
+        Write-Host "Repository downloaded and extracted successfully." -ForegroundColor Green
+    } catch {
+        Write-Host "Failed to download or extract repository: $_" -ForegroundColor Red
+        Write-Host "Will create minimal files to continue..." -ForegroundColor Yellow
+        
+        # Create minimal files
+        # Create dist directory
+        $DistDir = Join-Path $RepoDir "dist"
+        if (-not (Test-Path $DistDir)) {
+            New-Item -ItemType Directory -Path $DistDir -Force | Out-Null
+        }
+        
+        # Create index.js
+        $ServerScript = @"
+// Minimal ClaudeComputerCommander Server (EMERGENCY FALLBACK)
+console.log('ClaudeComputerCommander-Unlocked emergency fallback is running...');
+console.log('This is a minimal version. Please visit the repository for the full version:');
+console.log('https://github.com/jasondsmith72/ClaudeComputerCommander-Unlocked');
+
+const { StdioServerTransport } = require('@modelcontextprotocol/sdk/server/stdio.js');
+
+// Available functions
+const execute_command = async (command) => {
+  console.log(`Executing command: ${command}`);
+  const { exec } = require('child_process');
+  return new Promise((resolve) => {
+    exec(command, (error, stdout, stderr) => {
+      resolve({ output: stdout || stderr, pid: Math.floor(Math.random() * 10000) });
+    });
+  });
+};
+
+// Minimal server implementation
+const server = {
+  connect: async (transport) => {
+    console.log('Server connected');
+    transport.onRequest(async (request) => {
+      console.log('Received request:', request);
+      let response = { error: 'Function not implemented' };
+      
+      if (request.function === 'execute_command') {
+        response = await execute_command(request.parameters.command);
+      }
+      
+      return response;
+    });
+  }
+};
+
+// Start server
+const transport = new StdioServerTransport();
+server.connect(transport)
+  .catch(error => console.error('Server error:', error));
+"@
+        $ServerScript | Out-File -FilePath (Join-Path $DistDir "index.js") -Encoding utf8
+        
+        # Create config.json
+        $ConfigContent = @"
+{
+  "allowedDirectories": ["*"],
+  "allowedCommands": ["*"],
+  "fallbackMode": true
+}
+"@
+        $ConfigContent | Out-File -FilePath (Join-Path $RepoDir "config.json") -Encoding utf8
+        
+        Write-Host "Created minimal server files." -ForegroundColor Yellow
+    }
+}
+
+# Install dependencies and build
+Write-Host "Installing dependencies and building project..." -ForegroundColor Cyan
+$npmCommand = if ($UseSystemNode) { "npm" } else { Join-Path $NodeDir "npm.cmd" }
+$nodeCommand = if ($UseSystemNode) { "node" } else { Join-Path $NodeDir "node.exe" }
+
+# Check for package.json to determine if we have a full repo
+$hasPackageJson = Test-Path (Join-Path $RepoDir "package.json")
+if ($hasPackageJson) {
+    try {
+        Set-Location $RepoDir
+        # Install dependencies
+        & $npmCommand install
+        # Build project
+        & $npmCommand run build
+        Write-Host "Dependencies installed and project built successfully." -ForegroundColor Green
+    } catch {
+        Write-Host "Error installing dependencies or building project: $_" -ForegroundColor Red
+        Write-Host "Will use fallback server instead..." -ForegroundColor Yellow
+    }
+} else {
+    Write-Host "Incomplete repository download. Using minimal server." -ForegroundColor Yellow
+    
+    # Install minimum required packages
+    try {
+        Set-Location $RepoDir
+        # Create minimal package.json
+        $PackageJsonContent = @"
+{
+  "name": "claude-computer-commander-unlocked-minimal",
+  "version": "1.0.0",
+  "description": "Minimal fallback for ClaudeComputerCommander-Unlocked",
+  "main": "dist/index.js",
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^0.4.0"
+  }
+}
+"@
+        $PackageJsonContent | Out-File -FilePath (Join-Path $RepoDir "package.json") -Encoding utf8
+        
+        # Install minimum dependencies
+        & $npmCommand install --no-optional
+        Write-Host "Installed minimum required dependencies." -ForegroundColor Yellow
+    } catch {
+        Write-Host "Error installing minimum dependencies: $_" -ForegroundColor Red
+    }
+}
+
+# Create a startup script
 if ($UseSystemNode) {
     @"
 @echo off
@@ -207,15 +389,14 @@ node "$($RepoDir.Replace('\','\\'))\dist\index.js"
 "@ | Out-File -FilePath (Join-Path $RepoDir "start-commander.bat") -Encoding ascii
 }
 
-# Create Claude Desktop configuration with HARDCODED format without any PowerShell interpolation
-# This prevents any potential issues with PowerShell escaping or formatting
-Write-Host "Creating Claude Desktop configuration with hardcoded format..." -ForegroundColor Cyan
+# Create Claude Desktop configuration with hardcoded format to prevent issues
+Write-Host "Creating Claude Desktop configuration..." -ForegroundColor Cyan
 
 # Prepare the installation path with proper escaping for JSON
 $EscapedRepoDir = $RepoDir.Replace('\', '\\')
 $NodePath = if ($UseSystemNode) { "node" } else { "$($NodeDir.Replace('\', '\\'))\\node.exe" }
 
-# Create configuration JSON directly without PowerShell string interpolation
+# Create JSON content as plain string
 $jsonText = @"
 {
   "mcpServers": {
@@ -229,8 +410,21 @@ $jsonText = @"
 }
 "@
 
-# Write to file using .NET method to avoid encoding issues
-[System.IO.File]::WriteAllText($ClaudeConfig, $jsonText, [System.Text.Encoding]::UTF8)
+# Write to file using .NET directly to avoid PowerShell encoding issues
+try {
+    [System.IO.File]::WriteAllText($ClaudeConfig, $jsonText, [System.Text.Encoding]::UTF8)
+    Write-Host "Successfully created configuration file." -ForegroundColor Green
+} catch {
+    Write-Host "Error writing configuration file: $_" -ForegroundColor Red
+    
+    # Fallback method
+    try {
+        $jsonText | Out-File -FilePath $ClaudeConfig -Encoding utf8 -NoNewline
+        Write-Host "Used PowerShell Out-File as fallback method." -ForegroundColor Yellow
+    } catch {
+        Write-Host "All file writing methods failed. Cannot create configuration file." -ForegroundColor Red
+    }
+}
 
 Write-Host ""
 Write-Host "Installation completed successfully!" -ForegroundColor Green
