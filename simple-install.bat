@@ -29,6 +29,15 @@ if not exist "%CLAUDE_CONFIG_DIR%" mkdir "%CLAUDE_CONFIG_DIR%"
 
 set CLAUDE_CONFIG=%CLAUDE_CONFIG_DIR%\claude_desktop_config.json
 
+:: Create a backup if the file exists
+if exist "%CLAUDE_CONFIG%" (
+    for /f "tokens=2-4 delims=/ " %%a in ('date /t') do (set DATE=%%c-%%a-%%b)
+    for /f "tokens=1-2 delims=: " %%a in ('time /t') do (set TIME=%%a-%%b)
+    set BACKUP_FILE=%CLAUDE_CONFIG_DIR%\claude_desktop_config-bk-%DATE%-%TIME%.json
+    copy "%CLAUDE_CONFIG%" "%BACKUP_FILE%" > nul
+    echo Created backup of existing config: %BACKUP_FILE%
+)
+
 :: 3. Check if Node.js is already installed
 echo Checking for Node.js...
 where node >nul 2>&1
@@ -105,23 +114,41 @@ if "%USE_SYSTEM_NODE%"=="1" (
     echo "%NODE_DIR%\node.exe" "%REPO_DIR%\dist\index.js" >> "%REPO_DIR%\start-commander.bat"
 )
 
-:: 7. Create Claude configuration using PowerShell for reliable JSON formatting
+:: 7. Create Claude configuration - ULTRASIMPLE METHOD
 echo Updating Claude Desktop configuration...
 
-set INDEX_PATH=%REPO_DIR%\dist\index.js
-set INDEX_PATH=%INDEX_PATH:\=\\%
-
-:: Use PowerShell to create a valid JSON file
+:: Create a super-simple valid JSON configuration file
+echo { > "%CLAUDE_CONFIG%"
+echo   "mcpServers": { >> "%CLAUDE_CONFIG%"
+echo     "desktopCommander": { >> "%CLAUDE_CONFIG%"
 if "%USE_SYSTEM_NODE%"=="1" (
-    powershell -Command "$config = @{ mcpServers = @{ desktopCommander = @{ command = 'node'; args = @('%INDEX_PATH%') } } }; $jsonString = $config | ConvertTo-Json -Depth 10; Set-Content -Path '%CLAUDE_CONFIG%' -Value $jsonString -Encoding UTF8"
+    echo       "command": "node", >> "%CLAUDE_CONFIG%"
 ) else (
-    set NODE_EXE_PATH=%NODE_DIR%\node.exe
-    set NODE_EXE_PATH=%NODE_EXE_PATH:\=\\%
-    powershell -Command "$config = @{ mcpServers = @{ desktopCommander = @{ command = '%NODE_EXE_PATH%'; args = @('%INDEX_PATH%') } } }; $jsonString = $config | ConvertTo-Json -Depth 10; Set-Content -Path '%CLAUDE_CONFIG%' -Value $jsonString -Encoding UTF8"
+    set NODE_PATH=%NODE_DIR%\node.exe
+    set NODE_PATH=%NODE_PATH:\=\\%
+    echo       "command": "%NODE_PATH%", >> "%CLAUDE_CONFIG%"
 )
+echo       "args": [ >> "%CLAUDE_CONFIG%"
+set SERVER_PATH=%REPO_DIR%\dist\index.js
+set SERVER_PATH=%SERVER_PATH:\=\\%
+echo         "%SERVER_PATH%" >> "%CLAUDE_CONFIG%"
+echo       ] >> "%CLAUDE_CONFIG%"
+echo     } >> "%CLAUDE_CONFIG%"
+echo   } >> "%CLAUDE_CONFIG%"
+echo } >> "%CLAUDE_CONFIG%"
 
-:: 8. Verify the JSON file is valid
-powershell -Command "try { Get-Content '%CLAUDE_CONFIG%' | ConvertFrom-Json; Write-Host 'JSON validation successful!' -ForegroundColor Green } catch { Write-Host 'ERROR: Invalid JSON created. Please check the file manually.' -ForegroundColor Red }"
+:: 8. Run a very simple check on the JSON file
+findstr /C:"{" "%CLAUDE_CONFIG%" >nul
+if %errorlevel% equ 0 (
+    findstr /C:"mcpServers" "%CLAUDE_CONFIG%" >nul
+    if %errorlevel% equ 0 (
+        echo JSON file created and verified!
+    ) else (
+        echo JSON file may not be valid - missing key mcpServers
+    )
+) else (
+    echo JSON file may not be valid - missing opening brace
+)
 
 echo.
 echo Installation completed successfully!
@@ -138,6 +165,11 @@ echo.
 echo Claude Desktop has been configured to use this installation at:
 echo %CLAUDE_CONFIG%
 echo.
+if exist "%BACKUP_FILE%" (
+    echo A backup of your previous configuration was created at:
+    echo %BACKUP_FILE%
+    echo.
+)
 echo Please restart Claude Desktop to apply the changes.
 echo If Claude is already running, close it and start it again.
 echo.
