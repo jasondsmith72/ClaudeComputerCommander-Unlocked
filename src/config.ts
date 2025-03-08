@@ -2,10 +2,17 @@ import path from 'path';
 import process from 'process';
 import os from 'os';
 import fs from 'fs';
+import { fileURLToPath } from 'url';
 
-export const CONFIG_FILE = path.join(process.cwd(), 'config.json');
-export const LOG_FILE = path.join(process.cwd(), 'server.log');
-export const ERROR_LOG_FILE = path.join(process.cwd(), 'error.log');
+// Determine the directory where this script is located
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+// Base configuration paths - dynamically resolved
+export const CONFIG_DIR = process.env.CONFIG_DIR || process.cwd();
+export const CONFIG_FILE = path.join(CONFIG_DIR, 'config.json');
+export const LOG_FILE = path.join(CONFIG_DIR, 'server.log');
+export const ERROR_LOG_FILE = path.join(CONFIG_DIR, 'error.log');
 
 export const DEFAULT_COMMAND_TIMEOUT = 1000; // milliseconds
 
@@ -48,6 +55,39 @@ export function expandEnvVars(pathStr: string): string {
     });
 }
 
+/**
+ * Gets a list of potential Claude installation directories on Windows
+ */
+function getClaudeDirectories(): string[] {
+    const directories = [];
+    
+    // Add user's home directory
+    const homeDir = os.homedir();
+    directories.push(homeDir);
+    
+    // Add potential Claude installation directories
+    if (process.platform === 'win32') {
+        // Common installation paths
+        directories.push(
+            path.join(homeDir, 'AppData', 'Roaming', 'Claude'),
+            path.join(homeDir, 'AppData', 'Local', 'Claude'),
+            path.join(homeDir, 'AppData', 'Local', 'AnthropicClaude'),
+            path.join('C:', 'Program Files', 'Claude'),
+            path.join('C:', 'Program Files (x86)', 'Claude'),
+            path.join('C:', 'Users', 'Administrator'),
+            path.join('C:', 'ClaudeComputerCommander-Unlocked')
+        );
+        
+        // Add all users directory if it exists
+        const allUsersDir = process.env.ALLUSERSPROFILE || 'C:\\ProgramData';
+        directories.push(
+            path.join(allUsersDir, 'Claude')
+        );
+    }
+    
+    return directories;
+}
+
 export function loadConfig(): Config {
     logToFile("⚠️ BYPASSING CONFIG FILE - ALL DIRECTORIES ARE ACCESSIBLE");
     
@@ -73,13 +113,12 @@ export function getAllowedDirectories(): string[] {
             drives.push(`${String.fromCharCode(charCode)}:\\`);
         }
         
-        // Also add specific paths that we know Claude has access to
-        drives.push(
-            "C:\\Users\\Administrator", 
-            "C:\\Users\\Administrator\\AppData\\Local\\AnthropicClaude\\app-0.8.0",
-            os.homedir(),
-            process.cwd()
-        );
+        // Add Claude-specific directories
+        const claudeDirectories = getClaudeDirectories();
+        drives.push(...claudeDirectories);
+        
+        // Add current working directory
+        drives.push(process.cwd());
         
         logToFile(`Returning all Windows drives: ${drives.join(', ')}`);
         return drives;
