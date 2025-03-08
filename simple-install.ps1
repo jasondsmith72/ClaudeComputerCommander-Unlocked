@@ -28,11 +28,26 @@ if (-not (Test-Path $ClaudeConfigDir)) {
 }
 $ClaudeConfig = Join-Path $ClaudeConfigDir "claude_desktop_config.json"
 
+# Determine desktop location as a fallback for config
+$DesktopPath = [System.Environment]::GetFolderPath('Desktop')
+$OneDrivePath = Join-Path $env:USERPROFILE "OneDrive\Desktop"
+$DesktopConfigPath = Join-Path $DesktopPath "claude_desktop_config.json"
+$OneDriveConfigPath = Join-Path $OneDrivePath "claude_desktop_config.json"
+
+# Check if Desktop or OneDrive Desktop config exists instead of AppData location
+if (Test-Path $DesktopConfigPath) {
+    Write-Host "Found config on Desktop, will use that location instead of AppData" -ForegroundColor Yellow
+    $ClaudeConfig = $DesktopConfigPath
+} elseif (Test-Path $OneDriveConfigPath) {
+    Write-Host "Found config on OneDrive Desktop, will use that location instead of AppData" -ForegroundColor Yellow
+    $ClaudeConfig = $OneDriveConfigPath
+}
+
 # Check if config exists and create a backup with date/time stamp
 $BackupCreated = $false
 if (Test-Path $ClaudeConfig) {
     $Timestamp = Get-Date -Format "yyyy-MM-dd-HH.mm"
-    $BackupFile = "$ClaudeConfigDir\claude_desktop_config-bk-$Timestamp.json"
+    $BackupFile = [System.IO.Path]::ChangeExtension($ClaudeConfig, "bk-$Timestamp.json")
     Copy-Item -Path $ClaudeConfig -Destination $BackupFile -Force
     Write-Host "Created backup of existing config at: $BackupFile" -ForegroundColor Green
     $BackupCreated = $true
@@ -159,7 +174,7 @@ if (-not $UseSystemNode) {
 
 # Create config.json
 Write-Host "Creating server configuration..."
-'{"allowedDirectories":["*"],"allowedCommands":["*"]}' | Out-File -FilePath (Join-Path $RepoDir "config.json") -Encoding utf8
+'{\"allowedDirectories\":[\"*\"],\"allowedCommands\":[\"*\"]}' | Out-File -FilePath (Join-Path $RepoDir "config.json") -Encoding utf8
 
 # Create the dist directory and a minimal server script
 $DistDir = Join-Path $RepoDir "dist"
@@ -192,38 +207,30 @@ node "$($RepoDir.Replace('\','\\'))\dist\index.js"
 "@ | Out-File -FilePath (Join-Path $RepoDir "start-commander.bat") -Encoding ascii
 }
 
-# Create Claude Desktop configuration using the proper PowerShell ConvertTo-Json approach
-Write-Host "Creating Claude Desktop configuration with precise format..." -ForegroundColor Cyan
+# Create Claude Desktop configuration with HARDCODED format without any PowerShell interpolation
+# This prevents any potential issues with PowerShell escaping or formatting
+Write-Host "Creating Claude Desktop configuration with hardcoded format..." -ForegroundColor Cyan
 
-# Define the correct configuration object
-if ($UseSystemNode) {
-    $configObject = @{
-        mcpServers = @{
-            desktopCommander = @{
-                command = "node"
-                args = @(
-                    "$RepoDir\dist\index.js"
-                )
-            }
-        }
+# Prepare the installation path with proper escaping for JSON
+$EscapedRepoDir = $RepoDir.Replace('\', '\\')
+$NodePath = if ($UseSystemNode) { "node" } else { "$($NodeDir.Replace('\', '\\'))\\node.exe" }
+
+# Create configuration JSON directly without PowerShell string interpolation
+$jsonText = @"
+{
+  "mcpServers": {
+    "desktopCommander": {
+      "command": "$NodePath",
+      "args": [
+        "$EscapedRepoDir\\dist\\index.js"
+      ]
     }
-} else {
-    $NodeDir = Join-Path $RepoDir "node"
-    $configObject = @{
-        mcpServers = @{
-            desktopCommander = @{
-                command = "$NodeDir\node.exe"
-                args = @(
-                    "$RepoDir\dist\index.js"
-                )
-            }
-        }
-    }
+  }
 }
+"@
 
-# Convert object to JSON and write to file
-$jsonConfig = $configObject | ConvertTo-Json -Depth 10
-$jsonConfig | Out-File -FilePath $ClaudeConfig -Encoding utf8 -NoNewline
+# Write to file using .NET method to avoid encoding issues
+[System.IO.File]::WriteAllText($ClaudeConfig, $jsonText, [System.Text.Encoding]::UTF8)
 
 Write-Host ""
 Write-Host "Installation completed successfully!" -ForegroundColor Green
