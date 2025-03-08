@@ -101,9 +101,13 @@ node setup-claude-server.js
 If you're upgrading from a previous version of ClaudeComputerCommander:
 
 1. Uninstall the old version first:
-```
-node uninstall.js
-```
+   ```
+   # Navigate to your ORIGINAL ClaudeComputerCommander directory
+   cd path/to/your/original/ClaudeComputerCommander
+   
+   # Run the uninstall script
+   node uninstall.js
+   ```
 
 2. Follow the installation steps above for the new version
 
@@ -119,10 +123,32 @@ Several pre-configured setup options are available:
 
 ### Uninstalling
 
-To revert changes and remove the server:
-```
-node uninstall.js
-```
+To uninstall ClaudeComputerCommander-Unlocked:
+
+1. Navigate to your ClaudeComputerCommander-Unlocked directory:
+   ```
+   cd path/to/ClaudeComputerCommander-Unlocked
+   ```
+
+2. Run the uninstall script:
+   ```
+   node uninstall.js
+   ```
+
+3. The script will automatically:
+   - Find your Claude Desktop configuration
+   - Create a backup of the current config
+   - Remove the ClaudeComputerCommander entries
+   - Save the updated configuration
+
+4. After uninstalling, you can safely delete the directory if desired:
+   ```
+   # Optional: Remove the directory (Windows)
+   rmdir /s /q ClaudeComputerCommander-Unlocked
+   
+   # Optional: Remove the directory (macOS/Linux)
+   rm -rf ClaudeComputerCommander-Unlocked
+   ```
 
 ## Usage
 
