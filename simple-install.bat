@@ -2,12 +2,12 @@
 setlocal enabledelayedexpansion
 
 :: ClaudeComputerCommander-Unlocked Minimal Installer
-:: This script uses multiple methods to install Node.js
+:: This script installs winget first if needed, then Node.js
 
 echo ClaudeComputerCommander-Unlocked Minimal Installer
 echo ================================================
 echo This script will set up ClaudeComputerCommander-Unlocked
-echo and try multiple methods to install Node.js system-wide.
+echo and install winget and Node.js if needed.
 echo.
 
 :: Check for admin rights
@@ -24,13 +24,79 @@ if not exist "%REPO_DIR%" mkdir "%REPO_DIR%"
 cd "%REPO_DIR%"
 echo Created installation directory at: %REPO_DIR%
 
+:: Check if winget is already available
+winget --version >nul 2>&1
+if %errorlevel% neq 0 (
+    echo Winget is not available. Attempting to install winget...
+    
+    :: Check Windows version - winget requires Windows 10 1809 or later
+    ver | findstr /i "10\." >nul
+    if %errorlevel% equ 0 (
+        :: Windows 10 detected
+        echo Windows 10 detected, proceeding with winget installation...
+    ) else (
+        ver | findstr /i "11\." >nul
+        if %errorlevel% equ 0 (
+            :: Windows 11 detected
+            echo Windows 11 detected, proceeding with winget installation...
+        ) else (
+            echo Your Windows version appears to be older than Windows 10.
+            echo Winget may not be supported on your system.
+            echo Falling back to direct Node.js installation methods.
+            goto :try_node_installation
+        )
+    )
+    
+    :: Try to install App Installer (winget) via PowerShell and Microsoft Store
+    echo Attempting to install App Installer (winget) from Microsoft Store...
+    powershell -Command "Start-Process 'ms-windows-store://pdp/?ProductId=9NBLGGH4NNS1' -Wait"
+    
+    echo Waiting 10 seconds for installation to complete...
+    timeout /t 10 /nobreak >nul
+    
+    :: Check if winget is now available
+    winget --version >nul 2>&1
+    if %errorlevel% neq 0 (
+        :: Alternative: Try direct download of App Installer
+        echo Microsoft Store method unsuccessful. Trying direct download...
+        
+        set "TEMP_DIR=%TEMP%\winget_install"
+        if not exist "%TEMP_DIR%" mkdir "%TEMP_DIR%"
+        
+        :: Download the latest Microsoft.DesktopAppInstaller from GitHub
+        echo Downloading App Installer package...
+        powershell -Command "Invoke-WebRequest -Uri 'https://github.com/microsoft/winget-cli/releases/latest/download/Microsoft.DesktopAppInstaller_8wekyb3d8bbwe.msixbundle' -OutFile '%TEMP_DIR%\AppInstaller.msixbundle'"
+        
+        if exist "%TEMP_DIR%\AppInstaller.msixbundle" (
+            echo Installing App Installer package...
+            powershell -Command "Add-AppxPackage -Path '%TEMP_DIR%\AppInstaller.msixbundle'"
+            
+            :: Check if winget is now available
+            winget --version >nul 2>&1
+            if %errorlevel% equ 0 (
+                echo Winget installed successfully!
+            ) else (
+                echo Failed to install winget. Will try Node.js installation directly.
+            )
+        ) else (
+            echo Failed to download App Installer package.
+            echo Will try Node.js installation directly.
+        )
+    ) else (
+        echo Winget installed successfully!
+    )
+) else (
+    echo Winget is already installed.
+)
+
+:try_node_installation
 :: Try installation methods in sequence - winget, msi, direct download
 set "NODE_INSTALLED=0"
 
-:: Method 1: Check if winget is available
+:: Method 1: Check if winget is available and try to install Node.js
 winget --version >nul 2>&1
 if %errorlevel% equ 0 (
-    echo Winget is available. Trying to install Node.js using winget...
+    echo Using winget to install Node.js...
     winget install OpenJS.NodeJS.LTS -e --source winget
     
     :: Verify installation
@@ -44,7 +110,7 @@ if %errorlevel% equ 0 (
         echo Will try alternative methods.
     )
 ) else (
-    echo Winget is not available on this system.
+    echo Winget is not available despite installation attempts.
     echo Trying alternative Node.js installation methods...
 )
 
