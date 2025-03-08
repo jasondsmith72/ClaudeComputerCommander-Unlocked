@@ -414,6 +414,8 @@ if ($UseSystemNode) {
 $IndexPath = Join-Path $RepoDir "dist\index.js"
 
 # Set up Claude config directory and file
+Write-Host "Configuring Claude Desktop..." -ForegroundColor Cyan
+
 $ClaudeConfigDir = Join-Path $env:APPDATA "Claude"
 if (-not (Test-Path $ClaudeConfigDir)) {
     New-Item -ItemType Directory -Path $ClaudeConfigDir -Force | Out-Null
@@ -427,7 +429,7 @@ $BackupCreated = $false
 if (Test-Path $ClaudeConfigFile) {
     try {
         $timestamp = Get-Date -Format "yyyyMMdd-HHmmss"
-        $backupConfigFile = "$ClaudeConfigFile-backup-$timestamp"
+        $backupConfigFile = "$ClaudeConfigFile.bak-$timestamp"
         Copy-Item -Path $ClaudeConfigFile -Destination $backupConfigFile -Force
         Write-Host "Created backup of Claude config: $backupConfigFile" -ForegroundColor Green
         $BackupCreated = $true
@@ -436,59 +438,63 @@ if (Test-Path $ClaudeConfigFile) {
     }
 }
 
-# Create or update the Claude config file with properly formatted JSON
+# Create or update the Claude config file
 try {
-    # Default configuration structure
-    $DefaultConfig = @{
-        "mcpServers" = @{
-            "desktopCommander" = @{
-                "command" = $NodePath
-                "args" = @($IndexPath)
-            }
-        }
-    }
-    
-    $ExistingConfig = $null
-    if (Test-Path $ClaudeConfigFile) {
-        try {
-            # Try to read and parse existing config
-            $ExistingConfigContent = Get-Content -Path $ClaudeConfigFile -Raw -ErrorAction SilentlyContinue
-            $ExistingConfig = $ExistingConfigContent | ConvertFrom-Json -ErrorAction SilentlyContinue
-        } catch {
-            Write-Host "Existing Claude config file is invalid JSON. Will replace with correct format." -ForegroundColor Yellow
-        }
-    }
-    
-    if ($ExistingConfig -ne $null) {
-        # Config exists and is valid JSON, update the mcpServers section
-        if (-not (Get-Member -InputObject $ExistingConfig -Name "mcpServers" -MemberType Properties)) {
-            # mcpServers section doesn't exist, add it
-            Add-Member -InputObject $ExistingConfig -MemberType NoteProperty -Name "mcpServers" -Value @{}
-        }
-        
-        # Update or add desktopCommander configuration
-        if ($ExistingConfig.mcpServers -eq $null) {
-            $ExistingConfig.mcpServers = @{}
-        }
-        
-        $ExistingConfig.mcpServers | Add-Member -MemberType NoteProperty -Name "desktopCommander" -Value @{
+    # Prepare the new configuration
+    $mcpConfig = @{
+        "desktopCommander" = @{
             "command" = $NodePath
             "args" = @($IndexPath)
-        } -Force
-        
-        # Convert back to JSON and save
-        $UpdatedConfigJson = $ExistingConfig | ConvertTo-Json -Depth 10
-        $UpdatedConfigJson | Out-File -FilePath $ClaudeConfigFile -Encoding utf8
-    } else {
-        # No valid existing config, write a new one
-        $NewConfigJson = $DefaultConfig | ConvertTo-Json -Depth 10
-        $NewConfigJson | Out-File -FilePath $ClaudeConfigFile -Encoding utf8
+        }
     }
     
-    Write-Host "Successfully updated Claude configuration file at: $ClaudeConfigFile" -ForegroundColor Green
+    # Create the complete configuration object
+    $newConfig = @{
+        "mcpServers" = $mcpConfig
+    }
+    
+    # Check for existing configuration
+    $existingConfig = $null
+    if (Test-Path $ClaudeConfigFile) {
+        try {
+            $existingConfigJson = Get-Content -Path $ClaudeConfigFile -Raw -ErrorAction Stop
+            $existingConfig = $existingConfigJson | ConvertFrom-Json -ErrorAction Stop
+        } catch {
+            Write-Host "Existing Claude config file could not be parsed: $_" -ForegroundColor Yellow
+            Write-Host "Will create a new configuration file." -ForegroundColor Yellow
+            $existingConfig = $null
+        }
+    }
+    
+    # If we have valid existing config, merge with our new config
+    if ($null -ne $existingConfig) {
+        # If mcpServers exists, update it, otherwise add it
+        if (Get-Member -InputObject $existingConfig -Name "mcpServers" -MemberType Properties) {
+            # Convert existingConfig.mcpServers to a mutable object if it's not already
+            if ($null -eq $existingConfig.mcpServers) {
+                $existingConfig.mcpServers = @{}
+            }
+            
+            # Add our desktopCommander config
+            $existingConfig.mcpServers | Add-Member -Name "desktopCommander" -Value $mcpConfig.desktopCommander -MemberType NoteProperty -Force
+        } else {
+            # Add mcpServers property
+            $existingConfig | Add-Member -Name "mcpServers" -Value $mcpConfig -MemberType NoteProperty -Force
+        }
+        
+        # Convert back to JSON
+        $configJson = $existingConfig | ConvertTo-Json -Depth 10
+    } else {
+        # No existing config or invalid, use our new config
+        $configJson = $newConfig | ConvertTo-Json -Depth 10
+    }
+    
+    # Write the config file
+    $configJson | Out-File -FilePath $ClaudeConfigFile -Encoding utf8
+    Write-Host "Successfully updated Claude configuration at: $ClaudeConfigFile" -ForegroundColor Green
 } catch {
     Write-Host "Error updating Claude configuration: $_" -ForegroundColor Red
-    Write-Host "You will need to manually configure Claude to use the ClaudeComputerCommander." -ForegroundColor Yellow
+    Write-Host "You will need to manually configure Claude Desktop." -ForegroundColor Yellow
 }
 
 # Create template file containing configuration instructions
@@ -544,7 +550,7 @@ You can now ask Claude to:
 If you encounter any issues:
 - Make sure paths in the configuration match your actual installation
 - Verify that Claude Desktop has been restarted
-- Check for any error messages in Claude Desktop
+- Check for any error messages in Claude Desktop logs
 
 "@
 
