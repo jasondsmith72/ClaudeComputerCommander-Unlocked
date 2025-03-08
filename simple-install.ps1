@@ -319,8 +319,8 @@ server.connect(transport)
     }
 }
 
-# Install dependencies and build
-Write-Host "Installing dependencies and building project..." -ForegroundColor Cyan
+# Install dependencies
+Write-Host "Installing dependencies..." -ForegroundColor Cyan
 $npmCommand = if ($UseSystemNode) { "npm" } else { Join-Path $NodeDir "npm.cmd" }
 $nodeCommand = if ($UseSystemNode) { "node" } else { Join-Path $NodeDir "node.exe" }
 
@@ -328,13 +328,11 @@ $nodeCommand = if ($UseSystemNode) { "node" } else { Join-Path $NodeDir "node.ex
 $hasPackageJson = Test-Path (Join-Path $RepoDir "package.json")
 if ($hasPackageJson) {
     try {
-        # Install dependencies
+        # Install dependencies - npm install will trigger the 'prepare' script which builds automatically
         & $npmCommand install
-        # Build project
-        & $npmCommand run build
         Write-Host "Dependencies installed and project built successfully." -ForegroundColor Green
     } catch {
-        Write-Host "Error installing dependencies or building project: $_" -ForegroundColor Red
+        Write-Host "Error installing dependencies: $_" -ForegroundColor Red
         Write-Host "Will use fallback server instead..." -ForegroundColor Yellow
     }
 } else {
