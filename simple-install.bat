@@ -29,15 +29,6 @@ if not exist "%CLAUDE_CONFIG_DIR%" mkdir "%CLAUDE_CONFIG_DIR%"
 
 set CLAUDE_CONFIG=%CLAUDE_CONFIG_DIR%\claude_desktop_config.json
 
-:: Create Claude config file if it doesn't exist
-if not exist "%CLAUDE_CONFIG%" (
-    echo Creating Claude Desktop configuration file...
-    echo {"mcpServers":{}} > "%CLAUDE_CONFIG%"
-    echo Created new configuration file at: %CLAUDE_CONFIG%
-) else (
-    echo Using existing Claude configuration at: %CLAUDE_CONFIG%
-)
-
 :: 3. Check if Node.js is already installed
 echo Checking for Node.js...
 where node >nul 2>&1
@@ -114,38 +105,16 @@ if "%USE_SYSTEM_NODE%"=="1" (
     echo "%NODE_DIR%\node.exe" "%REPO_DIR%\dist\index.js" >> "%REPO_DIR%\start-commander.bat"
 )
 
-:: 7. Update Claude configuration
+:: 7. Use PowerShell to create a valid JSON config file
 echo Updating Claude Desktop configuration...
 
-:: Create a temp file for the JSON content
-set TEMP_JSON=%TEMP%\claude_config_temp.json
-
+:: Create a properly formatted JSON configuration using PowerShell
+:: This ensures the JSON is valid and properly escaped
 if "%USE_SYSTEM_NODE%"=="1" (
-    echo {> "%TEMP_JSON%"
-    echo   "mcpServers": {>> "%TEMP_JSON%"
-    echo     "desktopCommander": {>> "%TEMP_JSON%"
-    echo       "command": "node",>> "%TEMP_JSON%"
-    echo       "args": [>> "%TEMP_JSON%"
-    echo         "%REPO_DIR:\=\\%\\dist\\index.js">> "%TEMP_JSON%"
-    echo       ]>> "%TEMP_JSON%"
-    echo     }>> "%TEMP_JSON%"
-    echo   }>> "%TEMP_JSON%"
-    echo }>> "%TEMP_JSON%"
+    powershell -Command "$config = @{mcpServers = @{desktopCommander = @{command = 'node'; args = @('%REPO_DIR:\=/%/dist/index.js')}}}; ConvertTo-Json -Depth 3 $config | Set-Content -Path '%CLAUDE_CONFIG%' -Encoding UTF8"
 ) else (
-    echo {> "%TEMP_JSON%"
-    echo   "mcpServers": {>> "%TEMP_JSON%"
-    echo     "desktopCommander": {>> "%TEMP_JSON%"
-    echo       "command": "%NODE_DIR:\=\\%\\node.exe",>> "%TEMP_JSON%"
-    echo       "args": [>> "%TEMP_JSON%"
-    echo         "%REPO_DIR:\=\\%\\dist\\index.js">> "%TEMP_JSON%"
-    echo       ]>> "%TEMP_JSON%"
-    echo     }>> "%TEMP_JSON%"
-    echo   }>> "%TEMP_JSON%"
-    echo }>> "%TEMP_JSON%"
+    powershell -Command "$config = @{mcpServers = @{desktopCommander = @{command = '%NODE_DIR:\=/%/node.exe'; args = @('%REPO_DIR:\=/%/dist/index.js')}}}; ConvertTo-Json -Depth 3 $config | Set-Content -Path '%CLAUDE_CONFIG%' -Encoding UTF8"
 )
-
-:: Copy the file directly to the config location
-copy /Y "%TEMP_JSON%" "%CLAUDE_CONFIG%" >nul
 
 echo.
 echo Installation completed successfully!
