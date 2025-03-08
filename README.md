@@ -87,7 +87,8 @@ This script:
 1. Detects if Node.js is already installed on your system and uses it
 2. Downloads and configures a portable Node.js if needed
 3. Works reliably across different Windows versions and configurations
-4. Handles all configuration automatically
+4. Creates a properly formatted configuration file that works with Claude Desktop
+5. Handles all configuration automatically
 
 ### Option 1: Ultra-Simple Install
 
@@ -102,12 +103,6 @@ curl -s https://raw.githubusercontent.com/jasondsmith72/ClaudeComputerCommander-
 ```powershell
 # Run in PowerShell
 Invoke-WebRequest -Uri "https://raw.githubusercontent.com/jasondsmith72/ClaudeComputerCommander-Unlocked/main/simple-install.bat" -OutFile "simple-install.bat"; ./simple-install.bat
-```
-
-#### PowerShell (Short Version):
-```powershell
-# Run in PowerShell
-iwr https://raw.githubusercontent.com/jasondsmith72/ClaudeComputerCommander-Unlocked/main/simple-install.bat -OutFile simple-install.bat; ./simple-install.bat
 ```
 
 This batch file:
@@ -139,6 +134,27 @@ This batch file:
 3. Sets up everything automatically with zero dependencies
 4. Works even on locked-down systems where you can't install software
 5. Run as Administrator if possible for best results
+
+### Configuration Repair Tools
+
+If you encounter any issues with Claude Desktop configuration, use these quick repair tools:
+
+#### For Command Prompt (CMD):
+```cmd
+curl -s https://raw.githubusercontent.com/jasondsmith72/ClaudeComputerCommander-Unlocked/main/fix-json-config.bat -o fix-json-config.bat && fix-json-config.bat
+```
+
+#### For PowerShell:
+```powershell
+# Run in PowerShell
+iwr https://raw.githubusercontent.com/jasondsmith72/ClaudeComputerCommander-Unlocked/main/fix-json-config.ps1 -OutFile fix-json-config.ps1; .\fix-json-config.ps1
+```
+
+These repair tools will:
+1. Fix any JSON syntax errors in your Claude Desktop configuration
+2. Create a backup of your existing configuration
+3. Generate a properly formatted configuration file
+4. Fix the most common configuration issues
 
 ### Option 3: Complete Install with Claude Detection
 
@@ -304,7 +320,7 @@ If the automatic configuration fails, you can manually configure Claude Desktop:
    ```json
    "mcpServers": {
      "desktopCommander": {
-       "command": "C:\\Users\\YourUsername\\ClaudeComputerCommander-Unlocked\\node\\node.exe",
+       "command": "node",
        "args": [
          "C:\\Users\\YourUsername\\ClaudeComputerCommander-Unlocked\\dist\\index.js"
        ]
@@ -314,6 +330,24 @@ If the automatic configuration fails, you can manually configure Claude Desktop:
    (Replace YourUsername with your actual Windows username)
 
 4. Save the file and restart Claude Desktop
+
+## Troubleshooting
+
+If you encounter any issues with the installation or configuration:
+
+1. **JSON Configuration Errors** - If Claude Desktop shows a "Could not load app settings" error:
+   ```cmd
+   curl -s https://raw.githubusercontent.com/jasondsmith72/ClaudeComputerCommander-Unlocked/main/fix-json-config.bat -o fix-json-config.bat && fix-json-config.bat
+   ```
+   
+2. **Node.js Detection Issues** - If the installer doesn't properly detect your Node.js installation:
+   - Try running the PowerShell installer which has better detection logic
+   - Use the simple-install-ps.bat file which includes JSON configuration fixes
+
+3. **Installation Fails** - If all installation methods fail:
+   - Try running as Administrator
+   - Try the simple-install.bat which has the most direct approach
+   - Check your system for any security software that might be blocking the installation
 
 ## Configuration Options
 
