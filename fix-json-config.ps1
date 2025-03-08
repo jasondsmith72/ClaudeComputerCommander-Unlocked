@@ -17,11 +17,14 @@ if (-not (Test-Path $RepoDir)) {
     $RepoDir = Read-Host "Please enter the full path to your ClaudeComputerCommander-Unlocked installation"
 }
 
-# Create a backup of the existing config
+# Create a backup of the existing config with date/time stamp
+$BackupCreated = $false
 if (Test-Path $ClaudeConfigPath) {
-    $BackupPath = $ClaudeConfigPath -replace ".json$", ".backup.json"
+    $Timestamp = Get-Date -Format "yyyy-MM-dd-HH.mm"
+    $BackupPath = Join-Path (Split-Path $ClaudeConfigPath) "claude_desktop_config-bk-$Timestamp.json"
     Copy-Item -Path $ClaudeConfigPath -Destination $BackupPath -Force
     Write-Host "Created backup of current configuration at: $BackupPath" -ForegroundColor Green
+    $BackupCreated = $true
 }
 
 # Create the configuration JSON with the exactly correct format
@@ -45,6 +48,13 @@ Write-Host ""
 Write-Host "Successfully created a valid JSON configuration." -ForegroundColor Green
 Write-Host "Path: $ClaudeConfigPath" -ForegroundColor Cyan
 Write-Host ""
+
+if ($BackupCreated) {
+    Write-Host "A backup of your previous configuration was created at:"
+    Write-Host $BackupPath -ForegroundColor Cyan
+    Write-Host ""
+}
+
 Write-Host "Please restart Claude Desktop for changes to take effect."
 Write-Host "Press any key to exit..."
 $null = $Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown")
