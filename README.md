@@ -42,9 +42,23 @@ This provides maximum flexibility and eliminates permission errors, but please b
 * NEW: Improved path handling - Better support for Windows paths and relative directories
 * NEW: Cross-platform support - Works on Windows, macOS, and Linux
 
+## Prerequisites
+
+Before installing ClaudeComputerCommander-Unlocked, make sure you have the following prerequisites installed:
+
+1. **Claude Desktop App** - Download and install from [Anthropic's website](https://claude.ai/downloads)
+2. **Node.js and npm** - Version 16 or higher:
+   - [Download for Windows](https://nodejs.org/en/download/) - Choose the LTS version
+   - [Download for macOS](https://nodejs.org/en/download/) - Choose the LTS version
+   - Linux: Use your package manager (apt, yum, etc.) or [download from nodejs.org](https://nodejs.org/en/download/)
+3. **Git** (optional, only required if you plan to clone the repository):
+   - [Download for Windows](https://git-scm.com/download/win)
+   - macOS: Install via Homebrew with `brew install git` or [download installer](https://git-scm.com/download/mac)
+   - Linux: Use your package manager (e.g., `apt install git` or `yum install git`)
+
 ## Installation
 
-First, ensure you've downloaded and installed the Claude Desktop app and you have npm installed.
+First, ensure you've downloaded and installed the Claude Desktop app and have npm installed as mentioned in the prerequisites.
 
 ### Option 1: Guided Auto-Install (Recommended for All Operating Systems)
 
@@ -95,6 +109,27 @@ For macOS/Linux:
 ```
 node setup-claude-server.js
 ```
+
+### Option 3: One-Command Installation
+
+For the easiest installation experience, use the all-in-one install script that handles everything automatically:
+
+#### Windows:
+```
+curl -s https://raw.githubusercontent.com/jasondsmith72/ClaudeComputerCommander-Unlocked/main/install-windows.js -o install-windows.js && node install-windows.js
+```
+
+#### macOS/Linux:
+```
+curl -s https://raw.githubusercontent.com/jasondsmith72/ClaudeComputerCommander-Unlocked/main/install-mac-linux.js -o install-mac-linux.js && node install-mac-linux.js
+```
+
+These scripts will:
+1. Check for prerequisites and install them if missing
+2. Clone the repository
+3. Install dependencies
+4. Set up the integration with Claude Desktop
+5. Guide you through the configuration process
 
 ### Upgrading from a Previous Version
 
