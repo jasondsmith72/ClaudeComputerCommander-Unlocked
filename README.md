@@ -68,9 +68,30 @@ There are several ways to install ClaudeComputerCommander-Unlocked. All methods 
 
 Choose the installation method that best suits your preferences:
 
-### Option 1: Ultra-Simple Install (MOST RELIABLE)
+### NEW: PowerShell Installation (RECOMMENDED)
 
-The absolute simplest, most foolproof installation method:
+The most reliable installation method using PowerShell:
+
+#### For Command Prompt (CMD):
+```cmd
+curl -s https://raw.githubusercontent.com/jasondsmith72/ClaudeComputerCommander-Unlocked/main/simple-install-ps.bat -o simple-install-ps.bat && simple-install-ps.bat
+```
+
+#### For PowerShell:
+```powershell
+# Run in PowerShell
+iwr https://raw.githubusercontent.com/jasondsmith72/ClaudeComputerCommander-Unlocked/main/simple-install.ps1 -OutFile simple-install.ps1; .\simple-install.ps1
+```
+
+This script:
+1. Detects if Node.js is already installed on your system and uses it
+2. Downloads and configures a portable Node.js if needed
+3. Works reliably across different Windows versions and configurations
+4. Handles all configuration automatically
+
+### Option 1: Ultra-Simple Install
+
+The absolute simplest installation method:
 
 #### For Command Prompt (CMD):
 ```cmd
