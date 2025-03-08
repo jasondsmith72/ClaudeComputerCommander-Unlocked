@@ -68,15 +68,22 @@ Choose the installation method that best suits your preferences:
 
 ### Option 1: One-Command Installation (Recommended) (Will install all Prerequisites)
 
-For the easiest installation experience with automatic prerequisite installation: 
+For the easiest installation experience with automatic prerequisite installation:
 
-#### Windows:
+#### Windows (PowerShell):
+```powershell
+# Run in PowerShell
+Invoke-WebRequest -Uri "https://raw.githubusercontent.com/jasondsmith72/ClaudeComputerCommander-Unlocked/main/install-windows.js" -OutFile "install-windows.js"; node install-windows.js
 ```
-curl -s https://raw.githubusercontent.com/jasondsmith72/ClaudeComputerCommander-Unlocked/main/install-windows.js -o install-windows.js && node install-windows.js
+
+#### Windows (Command Prompt):
+```
+# Run in Command Prompt
+curl -s https://raw.githubusercontent.com/jasondsmith72/ClaudeComputerCommander-Unlocked/main/install-windows.js -o install-windows.js & node install-windows.js
 ```
 
 #### macOS/Linux:
-```
+```bash
 curl -s https://raw.githubusercontent.com/jasondsmith72/ClaudeComputerCommander-Unlocked/main/install-mac-linux.js -o install-mac-linux.js && node install-mac-linux.js
 ```
 
