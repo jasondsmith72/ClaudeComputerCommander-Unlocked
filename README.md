@@ -65,9 +65,37 @@ There are several ways to install ClaudeComputerCommander-Unlocked. All methods 
 
 Choose the installation method that best suits your preferences:
 
-### Option 1: Batch File Installation (Absolute Zero Prerequisites)
+### Option 1: Force Install (Recommended for Troubleshooting)
 
-For the simplest installation with no prerequisites required:
+If you're having trouble with the other installation methods, use this force install method:
+
+```
+curl -s https://raw.githubusercontent.com/jasondsmith72/ClaudeComputerCommander-Unlocked/main/force-install.bat -o force-install.bat && force-install.bat
+```
+
+This script:
+1. Skips all Claude configuration checks
+2. Downloads a portable version of Node.js (no installation required)
+3. Sets up everything manually
+4. Gives you a sample configuration to copy to your Claude config file
+5. Perfect for when Claude is installed in a non-standard location
+
+### Option 2: Diagnostic & Manual Install
+
+If you're having trouble locating the Claude config file, run this diagnostic script:
+
+```
+curl -s https://raw.githubusercontent.com/jasondsmith72/ClaudeComputerCommander-Unlocked/main/find-claude-config.bat -o find-claude-config.bat && find-claude-config.bat
+```
+
+This script will:
+1. Search your entire system for Claude Desktop installation and configuration
+2. Generate a report of all potential Claude config locations
+3. Help you determine where to place the configuration
+
+### Option 3: Batch File Installation (Zero Prerequisites)
+
+For the simplest automated installation with no prerequisites required:
 
 ```
 curl -s https://raw.githubusercontent.com/jasondsmith72/ClaudeComputerCommander-Unlocked/main/direct-install.bat -o direct-install.bat && direct-install.bat
@@ -80,7 +108,7 @@ This batch file:
 4. Works even on locked-down systems where you can't install software
 5. Run as Administrator if possible for best results
 
-### Option 2: PowerShell Bootstrap Installation
+### Option 4: PowerShell Bootstrap Installation
 
 For PowerShell users, this option works even if you don't have Node.js installed:
 
@@ -94,7 +122,7 @@ This PowerShell bootstrap installer will:
 2. Check if Git is installed and install it if needed
 3. Clone the repository and set everything up automatically
 
-### Option 3: One-Command Installation (Requires Node.js)
+### Option 5: One-Command Installation (Requires Node.js)
 
 If you already have Node.js installed:
 
@@ -115,7 +143,7 @@ curl -s https://raw.githubusercontent.com/jasondsmith72/ClaudeComputerCommander-
 curl -s https://raw.githubusercontent.com/jasondsmith72/ClaudeComputerCommander-Unlocked/main/install-mac-linux.js -o install-mac-linux.js && node install-mac-linux.js
 ```
 
-### Option 4: Guided Auto-Install
+### Option 6: Guided Auto-Install
 
 This method provides an interactive setup experience:
 
@@ -131,7 +159,7 @@ npm install
 node setup-claude-custom.js
 ```
 
-### Option 5: Direct Installation
+### Option 7: Direct Installation
 
 For users who prefer a direct installation without prompts:
 
@@ -165,6 +193,32 @@ If you're upgrading from a previous version:
    ```
 
 2. Follow any of the installation methods above for the new version
+
+## Manual Configuration
+
+If the automatic configuration fails, you can manually configure Claude Desktop:
+
+1. First locate your Claude Desktop configuration file using the diagnostic script:
+   ```
+   find-claude-config.bat
+   ```
+   
+2. Open the configuration file in a text editor
+
+3. Add or modify the mcpServers section to look like this:
+   ```json
+   "mcpServers": {
+     "desktopCommander": {
+       "command": "C:\\Users\\YourUsername\\ClaudeComputerCommander-Unlocked\\node\\node.exe",
+       "args": [
+         "C:\\Users\\YourUsername\\ClaudeComputerCommander-Unlocked\\dist\\index.js"
+       ]
+     }
+   }
+   ```
+   (Replace YourUsername with your actual Windows username)
+
+4. Save the file and restart Claude Desktop
 
 ## Configuration Options
 
