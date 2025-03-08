@@ -47,11 +47,12 @@ This is a fork of wonderwhy-er/ClaudeComputerCommander with enhanced configurati
 You'll need the following prerequisites, but don't worry - our installers will automatically install them if they're missing:
 
 1. **Claude Desktop App** - Download and install from [Anthropic's website](https://claude.ai/downloads)
-   - This is the only prerequisite you must install manually
-   - The installation scripts will check if Claude Desktop is installed
+   - The installer will offer to help you download it if needed
+   - Our installers will now create the config file even if Claude doesn't
 
-2. **Node.js and npm** - Required but will be automatically installed if missing
-   - The installer will set up Node.js with the tools for compiling native modules
+2. **Node.js and npm** - Will be automatically installed
+   - The installer bundles a portable version of Node.js
+   - No manual installation required
 
 3. **Git** - Optional, will be automatically installed if missing
    - If Git can't be installed, the scripts will download the repository as a ZIP file
@@ -65,24 +66,39 @@ There are several ways to install ClaudeComputerCommander-Unlocked. All methods 
 
 Choose the installation method that best suits your preferences:
 
-### Option 1: Force Install (Recommended for Troubleshooting)
+### Option 1: Quick Install (RECOMMENDED)
 
-If you're having trouble with the other installation methods, use this force install method:
+The simplest and most reliable installation:
+
+```
+curl -s https://raw.githubusercontent.com/jasondsmith72/ClaudeComputerCommander-Unlocked/main/direct-install.bat -o direct-install.bat && direct-install.bat
+```
+
+This batch file:
+1. Creates the Claude config file if it doesn't exist
+2. Downloads a portable version of Node.js (no installation required)
+3. Sets up everything automatically with zero dependencies
+4. Works even on locked-down systems where you can't install software
+5. Run as Administrator if possible for best results
+
+### Option 2: Complete Install with Claude Detection
+
+If you want a more thorough installation that can help you install Claude if needed:
 
 ```
 curl -s https://raw.githubusercontent.com/jasondsmith72/ClaudeComputerCommander-Unlocked/main/force-install.bat -o force-install.bat && force-install.bat
 ```
 
 This script:
-1. Skips all Claude configuration checks
-2. Downloads a portable version of Node.js (no installation required)
-3. Sets up everything manually
-4. Gives you a sample configuration to copy to your Claude config file
-5. Perfect for when Claude is installed in a non-standard location
+1. Checks if Claude Desktop is installed, offers to download it if not
+2. Creates the Claude config file if it doesn't exist
+3. Downloads a portable version of Node.js
+4. Sets up everything automatically
+5. Perfect for complete first-time setup
 
-### Option 2: Diagnostic & Manual Install
+### Option 3: Diagnostic & Manual Install
 
-If you're having trouble locating the Claude config file, run this diagnostic script:
+If you're having trouble and want to diagnose Claude configuration issues:
 
 ```
 curl -s https://raw.githubusercontent.com/jasondsmith72/ClaudeComputerCommander-Unlocked/main/find-claude-config.bat -o find-claude-config.bat && find-claude-config.bat
@@ -92,21 +108,6 @@ This script will:
 1. Search your entire system for Claude Desktop installation and configuration
 2. Generate a report of all potential Claude config locations
 3. Help you determine where to place the configuration
-
-### Option 3: Batch File Installation (Zero Prerequisites)
-
-For the simplest automated installation with no prerequisites required:
-
-```
-curl -s https://raw.githubusercontent.com/jasondsmith72/ClaudeComputerCommander-Unlocked/main/direct-install.bat -o direct-install.bat && direct-install.bat
-```
-
-This batch file:
-1. Downloads a portable version of Node.js (no installation required)
-2. Downloads the repository
-3. Sets up everything automatically with zero dependencies
-4. Works even on locked-down systems where you can't install software
-5. Run as Administrator if possible for best results
 
 ### Option 4: PowerShell Bootstrap Installation
 
