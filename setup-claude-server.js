@@ -78,7 +78,7 @@ try {
     const serverConfig = isNpx ? {
         "command": "npx",
         "args": [
-            "@wonderwhy-er/desktop-commander"
+            "@jasondsmith72/desktop-commander"
         ]
     } : {
         "command": "node",
