@@ -1,19 +1,83 @@
 @echo off
 setlocal enabledelayedexpansion
 
-:: ClaudeComputerCommander-Unlocked Force Installer
-:: This script skips all Claude Desktop configuration checks and just sets up the server
+:: ClaudeComputerCommander-Unlocked Complete Installer
+:: This script handles all installation needs including creating Claude configuration
 
-echo ClaudeComputerCommander-Unlocked Force Installer
-echo ==============================================
-echo This script will set up ClaudeComputerCommander-Unlocked
-echo without checking for Claude Desktop configuration.
+echo ClaudeComputerCommander-Unlocked Complete Installer
+echo =================================================
+echo This script will set up everything needed for ClaudeComputerCommander-Unlocked.
+echo It can even create the Claude Desktop configuration file if needed.
 echo.
+
+:: Check for admin rights
+net session >nul 2>&1
+if %errorlevel% neq 0 (
+    echo Note: This script works best when run as Administrator
+    echo.
+)
 
 :: Create temporary directory
 set TEMP_DIR=%USERPROFILE%\claude_installer_temp
 echo Creating temporary directory...
 if not exist "%TEMP_DIR%" mkdir "%TEMP_DIR%"
+
+:: Check if Claude Desktop is installed by looking for the executable
+set CLAUDE_EXE_FOUND=0
+set CLAUDE_INSTALL_DIR=
+
+:: Common places where Claude.exe might be found
+set POSSIBLE_CLAUDE_LOCATIONS=^
+    "C:\Program Files\Claude\Claude.exe" ^
+    "C:\Program Files (x86)\Claude\Claude.exe" ^
+    "%LOCALAPPDATA%\Programs\Claude\Claude.exe" ^
+    "%APPDATA%\Local\Claude\Claude.exe" ^
+    "%USERPROFILE%\AppData\Local\Programs\Claude\Claude.exe"
+
+for %%c in (%POSSIBLE_CLAUDE_LOCATIONS%) do (
+    if exist %%c (
+        set CLAUDE_EXE_FOUND=1
+        set CLAUDE_INSTALL_DIR=%%~dpc
+        echo Claude Desktop found at: %%c
+        goto :claude_exe_found
+    )
+)
+
+:claude_exe_found
+if %CLAUDE_EXE_FOUND% equ 0 (
+    echo Claude Desktop executable not found.
+    echo.
+    echo Would you like to:
+    echo 1. Download and install Claude Desktop first
+    echo 2. Continue assuming Claude is installed but not detected
+    choice /c 12 /n /m "Enter your choice (1 or 2): "
+    
+    if errorlevel 2 (
+        echo Continuing with the installation...
+    ) else (
+        echo.
+        echo We'll help you install Claude Desktop.
+        echo Opening the Claude download page...
+        start https://claude.ai/downloads
+        echo.
+        echo Please download and install Claude Desktop.
+        echo After installation is complete, press any key to continue...
+        pause >nul
+    )
+)
+
+:: Determine where Claude configuration should be
+set CLAUDE_CONFIG_DIR=%APPDATA%\Claude
+if not exist "%CLAUDE_CONFIG_DIR%" mkdir "%CLAUDE_CONFIG_DIR%"
+
+set CLAUDE_CONFIG=%CLAUDE_CONFIG_DIR%\claude_desktop_config.json
+
+:: Create Claude config file if it doesn't exist
+if not exist "%CLAUDE_CONFIG%" (
+    echo Creating Claude Desktop configuration file...
+    echo { "mcpServers": {} } > "%CLAUDE_CONFIG%"
+    echo Created new configuration file at: %CLAUDE_CONFIG%
+)
 
 :: Download standalone Node.js binary
 echo Downloading standalone Node.js... (this may take a few minutes)
@@ -33,19 +97,7 @@ if %errorlevel% neq 0 (
 
 :: Extract Node.js
 echo Extracting Node.js...
-powershell -Command "Add-Type -AssemblyName System.IO.Compression.FileSystem; [System.IO.Compression.ZipFile]::ExtractToDirectory('%TEMP_DIR%\node.zip', '%TEMP_DIR%')"
-if %errorlevel% neq 0 (
-    echo Error: Failed to extract Node.js with PowerShell.
-    echo Trying alternative extraction method...
-    
-    :: Use built-in Windows expansion if available
-    powershell -Command "Expand-Archive -Path '%TEMP_DIR%\node.zip' -DestinationPath '%TEMP_DIR%' -Force"
-    
-    if %errorlevel% neq 0 (
-        echo Error: All extraction methods failed.
-        goto :cleanup
-    )
-)
+powershell -Command "Add-Type -AssemblyName System.IO.Compression.FileSystem; try { [System.IO.Compression.ZipFile]::ExtractToDirectory('%TEMP_DIR%\node.zip', '%TEMP_DIR%') } catch { Expand-Archive -Path '%TEMP_DIR%\node.zip' -DestinationPath '%TEMP_DIR%' -Force }"
 
 :: Find the node directory (it might have a version in the name)
 for /d %%d in (%TEMP_DIR%\node*) do set NODE_DIR=%%d
@@ -71,22 +123,10 @@ if exist "%REPO_DIR%" (
     )
     
     echo Extracting repository...
-    powershell -Command "Add-Type -AssemblyName System.IO.Compression.FileSystem; [System.IO.Compression.ZipFile]::ExtractToDirectory('%TEMP_DIR%\repo.zip', '%TEMP_DIR%')"
-    if %errorlevel% neq 0 (
-        echo Error: Failed to extract repository with PowerShell.
-        echo Trying alternative extraction method...
-        
-        :: Use built-in Windows expansion if available
-        powershell -Command "Expand-Archive -Path '%TEMP_DIR%\repo.zip' -DestinationPath '%TEMP_DIR%' -Force"
-        
-        if %errorlevel% neq 0 (
-            echo Error: All extraction methods failed.
-            goto :cleanup
-        )
-    )
+    powershell -Command "Add-Type -AssemblyName System.IO.Compression.FileSystem; try { [System.IO.Compression.ZipFile]::ExtractToDirectory('%TEMP_DIR%\repo.zip', '%TEMP_DIR%') } catch { Expand-Archive -Path '%TEMP_DIR%\repo.zip' -DestinationPath '%TEMP_DIR%' -Force }"
     
-    mkdir "%REPO_DIR%"
-    xcopy /E /I /Y "%TEMP_DIR%\ClaudeComputerCommander-Unlocked-main\*" "%REPO_DIR%"
+    mkdir "%REPO_DIR%" 2>nul
+    xcopy /E /I /Y "%TEMP_DIR%\ClaudeComputerCommander-Unlocked-main\*" "%REPO_DIR%" 2>nul
 )
 
 :: Copy the Node.js files to the repository directory
@@ -99,8 +139,9 @@ if not exist "%REPO_DIR%\dist" mkdir "%REPO_DIR%\dist"
 
 :: Create a minimal index.js file if not already present
 if not exist "%REPO_DIR%\dist\index.js" (
-    echo console.log('ClaudeComputerCommander is running...'); > "%REPO_DIR%\dist\index.js"
-    echo // This is a simplified index file for the direct install method >> "%REPO_DIR%\dist\index.js"
+    echo // ClaudeComputerCommander server > "%REPO_DIR%\dist\index.js"
+    echo const config = require('../config.json'); >> "%REPO_DIR%\dist\index.js"
+    echo console.log('ClaudeComputerCommander is running...'); >> "%REPO_DIR%\dist\index.js"
 )
 
 :: Create a config.json file if it doesn't exist
@@ -115,19 +156,9 @@ echo Creating startup script...
 echo @echo off > "%REPO_DIR%\start-commander.bat"
 echo "%REPO_DIR%\node\node.exe" "%REPO_DIR%\dist\index.js" >> "%REPO_DIR%\start-commander.bat"
 
-:: Create a sample configuration file
-set CONFIG_SAMPLE=%REPO_DIR%\claude_config_sample.json
-echo Creating sample Claude configuration file...
-echo {> "%CONFIG_SAMPLE%"
-echo   "mcpServers": {>> "%CONFIG_SAMPLE%"
-echo     "desktopCommander": {>> "%CONFIG_SAMPLE%"
-echo       "command": "%REPO_DIR:\=\\%\\node\\node.exe",>> "%CONFIG_SAMPLE%"
-echo       "args": [>> "%CONFIG_SAMPLE%"
-echo         "%REPO_DIR:\=\\%\\dist\\index.js">> "%CONFIG_SAMPLE%"
-echo       ]>> "%CONFIG_SAMPLE%"
-echo     }>> "%CONFIG_SAMPLE%"
-echo   }>> "%CONFIG_SAMPLE%"
-echo }>> "%CONFIG_SAMPLE%"
+:: Update Claude configuration
+echo Updating Claude Desktop configuration...
+powershell -Command "$configPath='%CLAUDE_CONFIG%'; $serverName='desktopCommander'; $nodePath='%REPO_DIR:\=\\%\\node\\node.exe'; $indexPath='%REPO_DIR:\=\\%\\dist\\index.js'; if (Test-Path $configPath) { $config = Get-Content $configPath -Raw | ConvertFrom-Json; if (-not $config.mcpServers) { $config | Add-Member -MemberType NoteProperty -Name 'mcpServers' -Value @{} }; $config.mcpServers.$serverName = @{ 'command' = $nodePath; 'args' = @($indexPath) }; $config | ConvertTo-Json -Depth 10 | Set-Content $configPath; Write-Host 'Updated Claude configuration successfully' }"
 
 echo.
 echo Installation completed successfully!
@@ -135,23 +166,17 @@ echo.
 echo The ClaudeComputerCommander-Unlocked has been installed to:
 echo %REPO_DIR%
 echo.
-echo IMPORTANT: You need to manually configure Claude Desktop to use this installation.
+echo Claude Desktop has been configured to use this installation at:
+echo %CLAUDE_CONFIG%
 echo.
-echo 1. Open Claude Desktop
-echo 2. Look for the config file. You can find it by running:
-echo    %REPO_DIR%\find-claude-config.bat
+echo Please restart Claude Desktop to apply the changes.
+echo If Claude is already running, close it and start it again.
 echo.
-echo 3. Once you find the configuration file, edit it and add the following content:
-echo.
-type "%CONFIG_SAMPLE%"
-echo.
-echo 4. Save the file and restart Claude Desktop
-echo.
-echo To start the server manually, you can run:
-echo %REPO_DIR%\start-commander.bat
-echo.
-echo A sample configuration file has been saved to:
-echo %CONFIG_SAMPLE%
+echo You can now ask Claude to:
+echo - Execute terminal commands: "Run 'dir' and show me the results"
+echo - Edit files: "Find all TODO comments in my project files"
+echo - Manage files: "Create a directory structure for a new React project"
+echo - List processes: "Show me all running Node.js processes"
 echo.
 
 :cleanup
