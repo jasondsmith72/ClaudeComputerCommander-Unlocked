@@ -44,7 +44,7 @@ This is a fork of wonderwhy-er/ClaudeComputerCommander with enhanced configurati
 
 ## Prerequisites
 
-You'll need the following prerequisites, but don't worry - our one-command installers will automatically install them if they're missing:
+You'll need the following prerequisites, but don't worry - our installers will automatically install them if they're missing:
 
 1. **Claude Desktop App** - Download and install from [Anthropic's website](https://claude.ai/downloads)
    - This is the only prerequisite you must install manually
@@ -58,7 +58,7 @@ You'll need the following prerequisites, but don't worry - our one-command insta
 
 ## Installation
 
-There are three ways to install ClaudeComputerCommander-Unlocked. All methods will:
+There are several ways to install ClaudeComputerCommander-Unlocked. All methods will:
 - Download the necessary code
 - Install required dependencies
 - Configure Claude Desktop to use the commander
@@ -66,9 +66,23 @@ There are three ways to install ClaudeComputerCommander-Unlocked. All methods wi
 
 Choose the installation method that best suits your preferences:
 
-### Option 1: One-Command Installation (Recommended) (Will install all Prerequisites)
+### Option 1: One-Command Windows Installation (No Prerequisites Required)
 
-For the easiest installation experience with automatic prerequisite installation:
+This option works even if you don't have Node.js installed yet:
+
+```powershell
+# Run in PowerShell as Administrator
+irm https://raw.githubusercontent.com/jasondsmith72/ClaudeComputerCommander-Unlocked/main/install-bootstrap.ps1 | iex
+```
+
+This PowerShell bootstrap installer will:
+1. Check if Node.js is installed and install it if needed
+2. Check if Git is installed and install it if needed
+3. Clone the repository and set everything up automatically
+
+### Option 2: One-Command Installation (Requires Node.js)
+
+If you already have Node.js installed:
 
 #### Windows (PowerShell):
 ```powershell
@@ -87,7 +101,7 @@ curl -s https://raw.githubusercontent.com/jasondsmith72/ClaudeComputerCommander-
 curl -s https://raw.githubusercontent.com/jasondsmith72/ClaudeComputerCommander-Unlocked/main/install-mac-linux.js -o install-mac-linux.js && node install-mac-linux.js
 ```
 
-### Option 2: Guided Auto-Install
+### Option 3: Guided Auto-Install
 
 This method provides an interactive setup experience:
 
@@ -103,7 +117,7 @@ npm install
 node setup-claude-custom.js
 ```
 
-### Option 3: Direct Installation
+### Option 4: Direct Installation
 
 For users who prefer a direct installation without prompts:
 
