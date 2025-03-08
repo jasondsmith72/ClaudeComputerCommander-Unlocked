@@ -66,9 +66,24 @@ There are several ways to install ClaudeComputerCommander-Unlocked. All methods 
 
 Choose the installation method that best suits your preferences:
 
-### Option 1: Quick Install (RECOMMENDED)
+### Option 1: Ultra-Simple Install (MOST RELIABLE)
 
-The simplest and most reliable installation:
+The absolute simplest, most foolproof installation method:
+
+```
+curl -s https://raw.githubusercontent.com/jasondsmith72/ClaudeComputerCommander-Unlocked/main/simple-install.bat -o simple-install.bat && simple-install.bat
+```
+
+This batch file:
+1. Skips all package extraction - just gets the node.exe executable
+2. Creates a minimal, streamlined installation
+3. Uses direct file copying rather than complex scripts
+4. Works on virtually any Windows system
+5. Perfect for troubleshooting when other methods fail
+
+### Option 2: Quick Install
+
+Standard installation with more features:
 
 ```
 curl -s https://raw.githubusercontent.com/jasondsmith72/ClaudeComputerCommander-Unlocked/main/direct-install.bat -o direct-install.bat && direct-install.bat
@@ -81,7 +96,7 @@ This batch file:
 4. Works even on locked-down systems where you can't install software
 5. Run as Administrator if possible for best results
 
-### Option 2: Complete Install with Claude Detection
+### Option 3: Complete Install with Claude Detection
 
 If you want a more thorough installation that can help you install Claude if needed:
 
@@ -96,7 +111,7 @@ This script:
 4. Sets up everything automatically
 5. Perfect for complete first-time setup
 
-### Option 3: Diagnostic & Manual Install
+### Option 4: Diagnostic & Manual Install
 
 If you're having trouble and want to diagnose Claude configuration issues:
 
@@ -109,7 +124,7 @@ This script will:
 2. Generate a report of all potential Claude config locations
 3. Help you determine where to place the configuration
 
-### Option 4: PowerShell Bootstrap Installation
+### Option 5: PowerShell Bootstrap Installation
 
 For PowerShell users, this option works even if you don't have Node.js installed:
 
@@ -123,7 +138,7 @@ This PowerShell bootstrap installer will:
 2. Check if Git is installed and install it if needed
 3. Clone the repository and set everything up automatically
 
-### Option 5: One-Command Installation (Requires Node.js)
+### Option 6: One-Command Installation (Requires Node.js)
 
 If you already have Node.js installed:
 
@@ -144,7 +159,7 @@ curl -s https://raw.githubusercontent.com/jasondsmith72/ClaudeComputerCommander-
 curl -s https://raw.githubusercontent.com/jasondsmith72/ClaudeComputerCommander-Unlocked/main/install-mac-linux.js -o install-mac-linux.js && node install-mac-linux.js
 ```
 
-### Option 6: Guided Auto-Install
+### Option 7: Guided Auto-Install
 
 This method provides an interactive setup experience:
 
@@ -160,7 +175,7 @@ npm install
 node setup-claude-custom.js
 ```
 
-### Option 7: Direct Installation
+### Option 8: Direct Installation
 
 For users who prefer a direct installation without prompts:
 
