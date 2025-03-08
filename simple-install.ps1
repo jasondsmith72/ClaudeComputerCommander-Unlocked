@@ -319,6 +319,24 @@ server.connect(transport)
     }
 }
 
+# Create a temporary package.json without the prepare script
+$tempPackageJsonPath = Join-Path $RepoDir "package.json.temp"
+if (Test-Path (Join-Path $RepoDir "package.json")) {
+    $packageJsonContent = Get-Content -Path (Join-Path $RepoDir "package.json") -Raw
+    # Remove the prepare script to avoid double building
+    $packageJsonContent = $packageJsonContent -replace '"prepare": "npm run build",', ''
+    $packageJsonContent | Out-File -FilePath $tempPackageJsonPath -Encoding utf8
+    
+    # Backup the original package.json
+    Copy-Item -Path (Join-Path $RepoDir "package.json") -Destination (Join-Path $RepoDir "package.json.original") -Force
+    
+    # Replace with our modified version
+    Copy-Item -Path $tempPackageJsonPath -Destination (Join-Path $RepoDir "package.json") -Force
+    
+    # Clean up temp file
+    Remove-Item -Path $tempPackageJsonPath -Force -ErrorAction SilentlyContinue
+}
+
 # Install dependencies
 Write-Host "Installing dependencies..." -ForegroundColor Cyan
 $npmCommand = if ($UseSystemNode) { "npm" } else { Join-Path $NodeDir "npm.cmd" }
@@ -328,8 +346,18 @@ $nodeCommand = if ($UseSystemNode) { "node" } else { Join-Path $NodeDir "node.ex
 $hasPackageJson = Test-Path (Join-Path $RepoDir "package.json")
 if ($hasPackageJson) {
     try {
-        # Install dependencies - npm install will trigger the 'prepare' script which builds automatically
+        # Install dependencies without the prepare script trigger
         & $npmCommand install
+        
+        # Now explicitly run the build once
+        & $npmCommand run build
+        
+        # Restore the original package.json if it exists
+        if (Test-Path (Join-Path $RepoDir "package.json.original")) {
+            Copy-Item -Path (Join-Path $RepoDir "package.json.original") -Destination (Join-Path $RepoDir "package.json") -Force
+            Remove-Item -Path (Join-Path $RepoDir "package.json.original") -Force -ErrorAction SilentlyContinue
+        }
+        
         Write-Host "Dependencies installed and project built successfully." -ForegroundColor Green
     } catch {
         Write-Host "Error installing dependencies: $_" -ForegroundColor Red
