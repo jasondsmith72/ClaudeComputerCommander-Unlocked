@@ -105,42 +105,23 @@ if "%USE_SYSTEM_NODE%"=="1" (
     echo "%NODE_DIR%\node.exe" "%REPO_DIR%\dist\index.js" >> "%REPO_DIR%\start-commander.bat"
 )
 
-:: 7. Create Claude configuration using direct method
+:: 7. Create Claude configuration using PowerShell for reliable JSON formatting
 echo Updating Claude Desktop configuration...
 
 set INDEX_PATH=%REPO_DIR%\dist\index.js
 set INDEX_PATH=%INDEX_PATH:\=\\%
 
-:: Method 1: Use echo with proper line breaks to format the JSON
+:: Use PowerShell to create a valid JSON file
 if "%USE_SYSTEM_NODE%"=="1" (
-    (
-        echo {
-        echo   "mcpServers": {
-        echo     "desktopCommander": {
-        echo       "command": "node",
-        echo       "args": [
-        echo         "%INDEX_PATH%"
-        echo       ]
-        echo     }
-        echo   }
-        echo }
-    ) > "%CLAUDE_CONFIG%"
+    powershell -Command "$config = @{ mcpServers = @{ desktopCommander = @{ command = 'node'; args = @('%INDEX_PATH%') } } }; $jsonString = $config | ConvertTo-Json -Depth 10; Set-Content -Path '%CLAUDE_CONFIG%' -Value $jsonString -Encoding UTF8"
 ) else (
     set NODE_EXE_PATH=%NODE_DIR%\node.exe
     set NODE_EXE_PATH=%NODE_EXE_PATH:\=\\%
-    (
-        echo {
-        echo   "mcpServers": {
-        echo     "desktopCommander": {
-        echo       "command": "%NODE_EXE_PATH%",
-        echo       "args": [
-        echo         "%INDEX_PATH%"
-        echo       ]
-        echo     }
-        echo   }
-        echo }
-    ) > "%CLAUDE_CONFIG%"
+    powershell -Command "$config = @{ mcpServers = @{ desktopCommander = @{ command = '%NODE_EXE_PATH%'; args = @('%INDEX_PATH%') } } }; $jsonString = $config | ConvertTo-Json -Depth 10; Set-Content -Path '%CLAUDE_CONFIG%' -Value $jsonString -Encoding UTF8"
 )
+
+:: 8. Verify the JSON file is valid
+powershell -Command "try { Get-Content '%CLAUDE_CONFIG%' | ConvertFrom-Json; Write-Host 'JSON validation successful!' -ForegroundColor Green } catch { Write-Host 'ERROR: Invalid JSON created. Please check the file manually.' -ForegroundColor Red }"
 
 echo.
 echo Installation completed successfully!
