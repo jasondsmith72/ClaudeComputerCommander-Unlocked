@@ -41,6 +41,7 @@ This is a fork of wonderwhy-er/ClaudeComputerCommander with enhanced configurati
 * NEW: Command-based fallbacks - Even when direct file access fails, commands will be used as a fallback
 * NEW: Improved path handling - Better support for Windows paths and relative directories
 * NEW: Cross-platform support - Works on Windows, macOS, and Linux
+* NEW: Winget support - Option 1 now uses winget to install Node.js if available
 
 ## Prerequisites
 
@@ -51,7 +52,8 @@ You'll need the following prerequisites, but don't worry - our installers will a
    - Our installers will now create the config file even if Claude doesn't
 
 2. **Node.js and npm** - Will be automatically installed
-   - The installer bundles a portable version of Node.js
+   - The installer now tries to use winget to install Node.js system-wide
+   - Falls back to a portable version of Node.js if winget is not available
    - No manual installation required
 
 3. **Git** - Optional, will be automatically installed if missing
@@ -88,11 +90,12 @@ iwr https://raw.githubusercontent.com/jasondsmith72/ClaudeComputerCommander-Unlo
 ```
 
 This batch file:
-1. Skips all package extraction - just gets the node.exe executable
-2. Creates a minimal, streamlined installation
-3. Uses direct file copying rather than complex scripts
-4. Works on virtually any Windows system
-5. Perfect for troubleshooting when other methods fail
+1. Tries to install Node.js system-wide using winget for better compatibility
+2. Falls back to direct node.exe download if winget is not available
+3. Creates a minimal, streamlined installation
+4. Uses direct file copying rather than complex scripts
+5. Works on virtually any Windows system
+6. Perfect for troubleshooting when other methods fail
 
 ### Option 2: Quick Install
 
@@ -192,7 +195,29 @@ curl -s https://raw.githubusercontent.com/jasondsmith72/ClaudeComputerCommander-
 curl -s https://raw.githubusercontent.com/jasondsmith72/ClaudeComputerCommander-Unlocked/main/install-mac-linux.js -o install-mac-linux.js && node install-mac-linux.js
 ```
 
-### Option 7: Guided Auto-Install
+### Option 7: Winget Installation
+
+For Windows 10/11 users who prefer to install Node.js system-wide:
+
+#### For Command Prompt (CMD):
+```cmd
+curl -s https://raw.githubusercontent.com/jasondsmith72/ClaudeComputerCommander-Unlocked/main/winget-install.bat -o winget-install.bat && winget-install.bat
+```
+
+#### For PowerShell:
+```powershell
+# Run in PowerShell as Administrator
+Invoke-WebRequest -Uri "https://raw.githubusercontent.com/jasondsmith72/ClaudeComputerCommander-Unlocked/main/winget-install.bat" -OutFile "winget-install.bat"; ./winget-install.bat
+```
+
+This batch file:
+1. Uses winget to install Node.js system-wide (requires administrator privileges)
+2. Creates the Claude config file if it doesn't exist
+3. Sets up everything automatically using the system-wide Node.js
+4. No portable Node.js required - uses your system installation
+5. Run as Administrator for best results
+
+### Option 8: Guided Auto-Install
 
 This method provides an interactive setup experience:
 
@@ -208,7 +233,7 @@ npm install
 node setup-claude-custom.js
 ```
 
-### Option 8: Direct Installation
+### Option 9: Direct Installation
 
 For users who prefer a direct installation without prompts:
 
