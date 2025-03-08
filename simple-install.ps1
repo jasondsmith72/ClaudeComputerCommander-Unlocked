@@ -9,8 +9,8 @@ Write-Host ""
 # Check if running as administrator
 $isAdmin = ([Security.Principal.WindowsPrincipal] [Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
 if (-not $isAdmin) {
-    Write-Host "Note: This script works best when run as Administrator for system-wide installation." -ForegroundColor Yellow
-    Write-Host "Some features may be limited without admin rights." -ForegroundColor Yellow
+    Write-Host "NOTE: This script requires Administrator rights to install Node.js system-wide." -ForegroundColor Yellow
+    Write-Host "Please rerun the script as Administrator for best results." -ForegroundColor Yellow
     Write-Host ""
 }
 
@@ -38,83 +38,85 @@ if (-not (Test-Path $ClaudeConfig)) {
     Write-Host "Using existing Claude configuration at: $ClaudeConfig"
 }
 
-# Check if Node.js is already installed
+# Always attempt to install Node.js system-wide first, regardless of whether it's already installed
 $UseSystemNode = $false
-try {
-    $NodeVersion = node --version
-    Write-Host "Node.js $NodeVersion is already installed." -ForegroundColor Green
-    $UseSystemNode = $true
-} catch {
-    Write-Host "Node.js is not installed. Will attempt to install it system-wide." -ForegroundColor Yellow
+
+# Try to install Node.js using winget if available
+if ($isAdmin) {
+    Write-Host "Attempting to install Node.js system-wide..." -ForegroundColor Cyan
     
-    # Try to install Node.js using winget if available
     try {
+        # Check if winget is available
         $wingetVersion = winget --version
-        Write-Host "Winget found ($wingetVersion). Installing Node.js LTS..."
+        Write-Host "Winget found ($wingetVersion). Installing Node.js LTS..." -ForegroundColor Cyan
+        
+        # Run winget install command
         winget install OpenJS.NodeJS.LTS -e --source winget
         
         # Verify installation
+        $env:Path = [System.Environment]::GetEnvironmentVariable("Path","Machine") + ";" + [System.Environment]::GetEnvironmentVariable("Path","User")
         try {
             $NodeVersion = node --version
             Write-Host "Node.js $NodeVersion installed successfully with winget." -ForegroundColor Green
             $UseSystemNode = $true
         } catch {
-            Write-Host "Winget installation attempted but Node.js is not in PATH yet." -ForegroundColor Yellow
-            Write-Host "You may need to restart your computer to complete installation." -ForegroundColor Yellow
-            
-            # Will proceed with configuration assuming Node.js will be available after restart
+            Write-Host "Winget installation completed but Node.js is not in PATH yet." -ForegroundColor Yellow
+            Write-Host "Will configure for system Node.js - you may need to restart your computer later." -ForegroundColor Yellow
             $UseSystemNode = $true
         }
     } catch {
         Write-Host "Winget is not available. Attempting direct MSI installation..." -ForegroundColor Yellow
         
-        if ($isAdmin) {
-            try {
-                # Create temp directory for MSI
-                $TempDir = Join-Path $env:TEMP "node_install"
-                if (-not (Test-Path $TempDir)) {
-                    New-Item -ItemType Directory -Path $TempDir -Force | Out-Null
+        try {
+            # Create temp directory for MSI
+            $TempDir = Join-Path $env:TEMP "node_install"
+            if (-not (Test-Path $TempDir)) {
+                New-Item -ItemType Directory -Path $TempDir -Force | Out-Null
+            }
+            
+            # Download the Node.js MSI installer
+            $NodeMsiUrl = "https://nodejs.org/dist/v20.11.1/node-v20.11.1-x64.msi"
+            $NodeMsiPath = Join-Path $TempDir "node_installer.msi"
+            Write-Host "Downloading Node.js installer from $NodeMsiUrl..." -ForegroundColor Cyan
+            Invoke-WebRequest -Uri $NodeMsiUrl -OutFile $NodeMsiPath
+            
+            if (Test-Path $NodeMsiPath) {
+                Write-Host "Running Node.js installer..." -ForegroundColor Cyan
+                Start-Process -FilePath "msiexec.exe" -ArgumentList "/i `"$NodeMsiPath`" /qn" -Wait
+                
+                # Verify installation after MSI installer runs
+                $env:Path = [System.Environment]::GetEnvironmentVariable("Path","Machine") + ";" + [System.Environment]::GetEnvironmentVariable("Path","User")
+                try {
+                    $NodeVersion = node --version
+                    Write-Host "Node.js $NodeVersion installed successfully via MSI." -ForegroundColor Green
+                    $UseSystemNode = $true
+                } catch {
+                    Write-Host "MSI installation completed but Node.js is not in PATH yet." -ForegroundColor Yellow
+                    Write-Host "Will configure for system Node.js - you may need to restart your computer later." -ForegroundColor Yellow
+                    $UseSystemNode = $true
                 }
                 
-                # Download the Node.js MSI installer
-                $NodeMsiUrl = "https://nodejs.org/dist/v20.11.1/node-v20.11.1-x64.msi"
-                $NodeMsiPath = Join-Path $TempDir "node_installer.msi"
-                Write-Host "Downloading Node.js installer from $NodeMsiUrl..."
-                Invoke-WebRequest -Uri $NodeMsiUrl -OutFile $NodeMsiPath
-                
-                if (Test-Path $NodeMsiPath) {
-                    Write-Host "Running Node.js installer..."
-                    Start-Process -FilePath "msiexec.exe" -ArgumentList "/i `"$NodeMsiPath`" /qn" -Wait
-                    
-                    # Verify installation after MSI installer runs
-                    try {
-                        # Need to refresh PATH to detect newly installed Node.js
-                        $env:Path = [System.Environment]::GetEnvironmentVariable("Path","Machine") + ";" + [System.Environment]::GetEnvironmentVariable("Path","User")
-                        $NodeVersion = node --version
-                        Write-Host "Node.js $NodeVersion installed successfully via MSI." -ForegroundColor Green
-                        $UseSystemNode = $true
-                    } catch {
-                        Write-Host "MSI installation completed but Node.js is not in PATH yet." -ForegroundColor Yellow
-                        Write-Host "Assuming Node.js is installed and will be available after restart." -ForegroundColor Yellow
-                        
-                        # Will proceed with configuration assuming Node.js will be available after restart
-                        $UseSystemNode = $true
-                    }
-                    
-                    # Clean up
-                    Remove-Item -Path $NodeMsiPath -Force
-                } else {
-                    Write-Host "Failed to download Node.js MSI installer." -ForegroundColor Red
-                    Write-Host "Will fall back to portable installation." -ForegroundColor Yellow
-                }
-            } catch {
-                Write-Host "Error during MSI installation: $_" -ForegroundColor Red
+                # Clean up
+                Remove-Item -Path $NodeMsiPath -Force
+            } else {
+                Write-Host "Failed to download Node.js MSI installer." -ForegroundColor Red
                 Write-Host "Will fall back to portable installation." -ForegroundColor Yellow
             }
-        } else {
-            Write-Host "Cannot perform system installation without administrator rights." -ForegroundColor Red
+        } catch {
+            Write-Host "Error during MSI installation: $_" -ForegroundColor Red
             Write-Host "Will fall back to portable installation." -ForegroundColor Yellow
         }
+    }
+} else {
+    Write-Host "Administrator rights required for system-wide Node.js installation." -ForegroundColor Yellow
+    
+    # Check if Node.js is already installed
+    try {
+        $NodeVersion = node --version
+        Write-Host "Node.js $NodeVersion is already installed. Will use existing installation." -ForegroundColor Green
+        $UseSystemNode = $true
+    } catch {
+        Write-Host "Will fall back to portable installation since we don't have admin rights." -ForegroundColor Yellow
     }
 }
 
@@ -129,6 +131,7 @@ if (-not $UseSystemNode) {
     }
     
     try {
+        Write-Host "Downloading portable Node.js executable..." -ForegroundColor Cyan
         Invoke-WebRequest -Uri "https://nodejs.org/dist/v20.11.1/win-x64/node.exe" -OutFile (Join-Path $NodeDir "node.exe")
         Write-Host "Successfully downloaded Node.js executable to $NodeDir\node.exe" -ForegroundColor Green
     } catch {
@@ -208,11 +211,11 @@ if ($UseSystemNode) {
     if ($isAdmin) {
         Write-Host "Node.js has been installed system-wide and will be available for all applications." -ForegroundColor Green
     } else {
-        Write-Host "Note: You may need to restart your computer for Node.js to be fully available system-wide." -ForegroundColor Yellow
+        Write-Host "Using existing system-wide Node.js installation." -ForegroundColor Green
     }
 } else {
     Write-Host "Using portable Node.js just for Claude Commander." -ForegroundColor Yellow
-    Write-Host "For a more complete installation, consider running this script as Administrator." -ForegroundColor Yellow
+    Write-Host "For a system-wide installation, re-run this script as Administrator." -ForegroundColor Yellow
 }
 Write-Host ""
 Write-Host "The ClaudeComputerCommander-Unlocked has been installed to:"
