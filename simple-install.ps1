@@ -15,7 +15,6 @@ if (-not $isAdmin) {
 
 # Set installation directory
 $RepoDir = Join-Path $env:USERPROFILE "ClaudeComputerCommander-Unlocked"
-Write-Host "Installing to: $RepoDir" -ForegroundColor Cyan
 
 # Create/clean installation directory
 if (Test-Path $RepoDir) {
@@ -35,10 +34,6 @@ if (Test-Path $RepoDir) {
         }
     }
 }
-
-New-Item -ItemType Directory -Path $RepoDir -Force | Out-Null
-Set-Location $RepoDir
-Write-Host "Created installation directory at: $RepoDir"
 
 # First check if Node.js is already installed
 $UseSystemNode = $false
@@ -137,6 +132,12 @@ try {
 
 # Fall back to portable Node.js only if system installation failed
 if (-not $UseSystemNode) {
+    # Create the installation directory if it doesn't exist
+    if (-not (Test-Path $RepoDir)) {
+        New-Item -ItemType Directory -Path $RepoDir -Force | Out-Null
+        Write-Host "Created installation directory at: $RepoDir"
+    }
+    
     Write-Host "Setting up portable Node.js installation..." -ForegroundColor Yellow
     
     # Download Node.js executable directly
@@ -178,11 +179,21 @@ try {
 
 # Clone or download repository
 if ($hasGit) {
-    # Clone repository
+    # Clone repository (note: we're not in the target directory yet)
     Write-Host "Cloning ClaudeComputerCommander-Unlocked repository..." -ForegroundColor Cyan
     try {
+        # If the directory doesn't exist, create it first
+        if (-not (Test-Path $RepoDir)) {
+            New-Item -ItemType Directory -Path $RepoDir -Force | Out-Null
+            Write-Host "Created installation directory at: $RepoDir"
+        }
+        
+        # Clone into the directory 
         & git clone https://github.com/jasondsmith72/ClaudeComputerCommander-Unlocked.git $RepoDir
         Write-Host "Repository cloned successfully." -ForegroundColor Green
+        
+        # Now change to the repository directory
+        Set-Location $RepoDir
     } catch {
         Write-Host "Failed to clone repository: $_" -ForegroundColor Red
         Write-Host "Will download as ZIP instead..." -ForegroundColor Yellow
@@ -208,6 +219,12 @@ if (-not $hasGit) {
         # Extract
         Expand-Archive -Path $zipPath -DestinationPath $extractPath -Force
         
+        # Create target directory if it doesn't exist
+        if (-not (Test-Path $RepoDir)) {
+            New-Item -ItemType Directory -Path $RepoDir -Force | Out-Null
+            Write-Host "Created installation directory at: $RepoDir"
+        }
+        
         # Move contents to repo directory
         $extractedDir = Join-Path $extractPath "ClaudeComputerCommander-Unlocked-main"
         if (Test-Path $extractedDir) {
@@ -227,6 +244,9 @@ if (-not $hasGit) {
         Remove-Item -Path $extractPath -Recurse -Force -ErrorAction SilentlyContinue
         
         Write-Host "Repository downloaded and extracted successfully." -ForegroundColor Green
+        
+        # Now change to the repository directory
+        Set-Location $RepoDir
     } catch {
         Write-Host "Failed to download or extract repository: $_" -ForegroundColor Red
         Write-Host "Will create minimal files to continue..." -ForegroundColor Yellow
@@ -293,6 +313,9 @@ server.connect(transport)
         $ConfigContent | Out-File -FilePath (Join-Path $RepoDir "config.json") -Encoding utf8
         
         Write-Host "Created minimal server files." -ForegroundColor Yellow
+        
+        # Change to the repository directory
+        Set-Location $RepoDir
     }
 }
 
@@ -305,7 +328,6 @@ $nodeCommand = if ($UseSystemNode) { "node" } else { Join-Path $NodeDir "node.ex
 $hasPackageJson = Test-Path (Join-Path $RepoDir "package.json")
 if ($hasPackageJson) {
     try {
-        Set-Location $RepoDir
         # Install dependencies
         & $npmCommand install
         # Build project
@@ -320,7 +342,6 @@ if ($hasPackageJson) {
     
     # Install minimum required packages
     try {
-        Set-Location $RepoDir
         # Create minimal package.json
         $PackageJsonContent = @"
 {
