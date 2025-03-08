@@ -1,4 +1,3 @@
-
 # ClaudeComputerCommanderUnlocked
 
 Short version. Two key things. Terminal commands and diff based file editing.
@@ -47,20 +46,20 @@ This provides maximum flexibility and eliminates permission errors, but please b
 
 First, ensure you've downloaded and installed the Claude Desktop app and you have npm installed.
 
-### Option 1: Custom Setup (Recommended)
+### Option 1: Guided Auto-Install (Recommended for All Operating Systems)
 
-This method is best if you don't have permissions to directly modify the Claude config file or prefer a guided approach:
+This method automatically detects your operating system and provides a guided setup:
 
 1. Clone the repository:
 
 ```
-git clone https://github.com/jasondsmith72/ClaudeComputerCommanderUnlocked.git
+git clone https://github.com/jasondsmith72/ClaudeComputerCommander-Unlocked.git
 ```
 
 2. Navigate to the cloned directory
 
 ```
-cd ClaudeComputerCommanderUnlocked
+cd ClaudeComputerCommander-Unlocked
 ```
 
 3. Install dependencies
@@ -69,21 +68,21 @@ cd ClaudeComputerCommanderUnlocked
 npm install
 ```
 
-4. Run the custom setup script:
+4. Run the guided setup script (works on both Windows and macOS/Linux):
 
 ```
 node setup-claude-custom.js
 ```
 
-Follow the prompts to select your Claude app location, configuration options, and to start the server.
+The script will automatically detect your OS, create backups of existing configurations, and guide you through the setup process.
 
-### Option 2: Automated Setup
+### Option 2: Direct Installation
 
-Use this method if you have the standard Claude installation:
+For users who prefer a direct installation without prompts:
 
 ```
-git clone https://github.com/jasondsmith72/ClaudeComputerCommanderUnlocked.git
-cd ClaudeComputerCommanderUnlocked
+git clone https://github.com/jasondsmith72/ClaudeComputerCommander-Unlocked.git
+cd ClaudeComputerCommander-Unlocked
 npm install
 ```
 
@@ -92,10 +91,21 @@ For Windows:
 node setup-claude-windows.js
 ```
 
-For macOS/Linux (with standard installation locations):
+For macOS/Linux:
 ```
 node setup-claude-server.js
 ```
+
+### Upgrading from a Previous Version
+
+If you're upgrading from a previous version of ClaudeComputerCommander:
+
+1. Uninstall the old version first:
+```
+node uninstall.js
+```
+
+2. Follow the installation steps above for the new version
 
 ### Configuration Files
 
