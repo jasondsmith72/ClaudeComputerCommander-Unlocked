@@ -60,15 +60,29 @@ You'll need the following prerequisites, but don't worry - our installers will a
 
 There are several ways to install ClaudeComputerCommander-Unlocked. All methods will:
 - Download the necessary code
-- Install required dependencies
 - Configure Claude Desktop to use the commander
 - Create backups of your existing configuration
 
 Choose the installation method that best suits your preferences:
 
-### Option 1: One-Command Windows Installation (No Prerequisites Required)
+### Option 1: Batch File Installation (Absolute Zero Prerequisites)
 
-This option works even if you don't have Node.js installed yet:
+For the simplest installation with no prerequisites required:
+
+```
+curl -s https://raw.githubusercontent.com/jasondsmith72/ClaudeComputerCommander-Unlocked/main/direct-install.bat -o direct-install.bat && direct-install.bat
+```
+
+This batch file:
+1. Downloads a portable version of Node.js (no installation required)
+2. Downloads the repository
+3. Sets up everything automatically with zero dependencies
+4. Works even on locked-down systems where you can't install software
+5. Run as Administrator if possible for best results
+
+### Option 2: PowerShell Bootstrap Installation
+
+For PowerShell users, this option works even if you don't have Node.js installed:
 
 ```powershell
 # Run in PowerShell as Administrator
@@ -80,7 +94,7 @@ This PowerShell bootstrap installer will:
 2. Check if Git is installed and install it if needed
 3. Clone the repository and set everything up automatically
 
-### Option 2: One-Command Installation (Requires Node.js)
+### Option 3: One-Command Installation (Requires Node.js)
 
 If you already have Node.js installed:
 
@@ -101,7 +115,7 @@ curl -s https://raw.githubusercontent.com/jasondsmith72/ClaudeComputerCommander-
 curl -s https://raw.githubusercontent.com/jasondsmith72/ClaudeComputerCommander-Unlocked/main/install-mac-linux.js -o install-mac-linux.js && node install-mac-linux.js
 ```
 
-### Option 3: Guided Auto-Install
+### Option 4: Guided Auto-Install
 
 This method provides an interactive setup experience:
 
@@ -117,7 +131,7 @@ npm install
 node setup-claude-custom.js
 ```
 
-### Option 4: Direct Installation
+### Option 5: Direct Installation
 
 For users who prefer a direct installation without prompts:
 
