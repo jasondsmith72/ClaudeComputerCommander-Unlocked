@@ -31,21 +31,23 @@ set CLAUDE_CONFIG=%CLAUDE_CONFIG_DIR%\claude_desktop_config.json
 :: Create Claude config file if it doesn't exist
 if not exist "%CLAUDE_CONFIG%" (
     echo Creating Claude Desktop configuration file...
-    echo { "mcpServers": {} } > "%CLAUDE_CONFIG%"
+    echo {"mcpServers":{}} > "%CLAUDE_CONFIG%"
     echo Created new configuration file at: %CLAUDE_CONFIG%
+) else (
+    echo Using existing Claude configuration at: %CLAUDE_CONFIG%
 )
 
 :: Download standalone Node.js binary
 echo Downloading standalone Node.js... (this may take a few minutes)
-powershell -Command "Invoke-WebRequest -Uri 'https://nodejs.org/dist/v20.11.1/node-v20.11.1-win-x64.zip' -OutFile '%TEMP_DIR%\node.zip'"
-if %errorlevel% neq 0 (
+powershell -Command "try { Invoke-WebRequest -Uri 'https://nodejs.org/dist/v20.11.1/node-v20.11.1-win-x64.zip' -OutFile '%TEMP_DIR%\node.zip' } catch { Write-Host $_.Exception.Message }"
+if not exist "%TEMP_DIR%\node.zip" (
     echo Error: Failed to download Node.js.
     echo Trying alternative download method...
     
     :: Fallback to bitsadmin (available on most Windows versions)
     bitsadmin /transfer NodeJSDownload /download /priority normal https://nodejs.org/dist/v20.11.1/node-v20.11.1-win-x64.zip "%TEMP_DIR%\node.zip"
     
-    if %errorlevel% neq 0 (
+    if not exist "%TEMP_DIR%\node.zip" (
         echo Error: All download methods failed. Please check your internet connection.
         goto :cleanup
     )
@@ -53,10 +55,42 @@ if %errorlevel% neq 0 (
 
 :: Extract Node.js
 echo Extracting Node.js...
-powershell -Command "Add-Type -AssemblyName System.IO.Compression.FileSystem; try { [System.IO.Compression.ZipFile]::ExtractToDirectory('%TEMP_DIR%\node.zip', '%TEMP_DIR%') } catch { Expand-Archive -Path '%TEMP_DIR%\node.zip' -DestinationPath '%TEMP_DIR%' -Force }"
+powershell -Command "try { Add-Type -AssemblyName System.IO.Compression.FileSystem; [System.IO.Compression.ZipFile]::ExtractToDirectory('%TEMP_DIR%\node.zip', '%TEMP_DIR%') } catch { try { Expand-Archive -Path '%TEMP_DIR%\node.zip' -DestinationPath '%TEMP_DIR%' -Force } catch { Write-Host $_.Exception.Message } }"
 
-:: Find the node directory (it might have a version in the name)
-for /d %%d in (%TEMP_DIR%\node*) do set NODE_DIR=%%d
+:: Check if extraction worked
+set NODE_EXTRACTED=0
+for /d %%d in (%TEMP_DIR%\node*) do (
+    set NODE_DIR=%%d
+    set NODE_EXTRACTED=1
+    goto :node_found
+)
+
+:node_found
+if %NODE_EXTRACTED% equ 0 (
+    echo Failed to extract Node.js. Trying manual extraction...
+    
+    :: Try to extract manually using PowerShell's Expand-Archive
+    powershell -Command "Expand-Archive -Path '%TEMP_DIR%\node.zip' -DestinationPath '%TEMP_DIR%' -Force"
+    
+    :: Check again
+    for /d %%d in (%TEMP_DIR%\node*) do (
+        set NODE_DIR=%%d
+        set NODE_EXTRACTED=1
+        goto :node_extracted
+    )
+    
+    if %NODE_EXTRACTED% equ 0 (
+        echo Failed to extract Node.js. Please extract it manually from:
+        echo %TEMP_DIR%\node.zip
+        echo to:
+        echo %TEMP_DIR%
+        pause
+        goto :cleanup
+    )
+)
+
+:node_extracted
+echo Node.js extracted successfully to: %NODE_DIR%
 
 :: Download the repository
 echo Downloading ClaudeComputerCommander-Unlocked...
@@ -64,24 +98,31 @@ set REPO_DIR=%USERPROFILE%\ClaudeComputerCommander-Unlocked
 if exist "%REPO_DIR%" (
     echo Repository directory already exists. Using existing files.
 ) else (
-    powershell -Command "Invoke-WebRequest -Uri 'https://github.com/jasondsmith72/ClaudeComputerCommander-Unlocked/archive/refs/heads/main.zip' -OutFile '%TEMP_DIR%\repo.zip'"
-    if %errorlevel% neq 0 (
+    powershell -Command "try { Invoke-WebRequest -Uri 'https://github.com/jasondsmith72/ClaudeComputerCommander-Unlocked/archive/refs/heads/main.zip' -OutFile '%TEMP_DIR%\repo.zip' } catch { Write-Host $_.Exception.Message }"
+    if not exist "%TEMP_DIR%\repo.zip" (
         echo Error: Failed to download repository.
         echo Trying alternative download method...
         
         :: Fallback to bitsadmin
         bitsadmin /transfer RepoDownload /download /priority normal https://github.com/jasondsmith72/ClaudeComputerCommander-Unlocked/archive/refs/heads/main.zip "%TEMP_DIR%\repo.zip"
         
-        if %errorlevel% neq 0 (
+        if not exist "%TEMP_DIR%\repo.zip" (
             echo Error: All download methods failed. Please check your internet connection.
             goto :cleanup
         )
     )
     
     echo Extracting repository...
-    powershell -Command "Add-Type -AssemblyName System.IO.Compression.FileSystem; try { [System.IO.Compression.ZipFile]::ExtractToDirectory('%TEMP_DIR%\repo.zip', '%TEMP_DIR%') } catch { Expand-Archive -Path '%TEMP_DIR%\repo.zip' -DestinationPath '%TEMP_DIR%' -Force }"
+    powershell -Command "try { Add-Type -AssemblyName System.IO.Compression.FileSystem; [System.IO.Compression.ZipFile]::ExtractToDirectory('%TEMP_DIR%\repo.zip', '%TEMP_DIR%') } catch { try { Expand-Archive -Path '%TEMP_DIR%\repo.zip' -DestinationPath '%TEMP_DIR%' -Force } catch { Write-Host $_.Exception.Message } }"
+    
+    :: Check if the extraction worked
+    if not exist "%TEMP_DIR%\ClaudeComputerCommander-Unlocked-main" (
+        echo Failed to extract repository. Extraction may have failed.
+        goto :cleanup
+    )
     
     mkdir "%REPO_DIR%" 2>nul
+    echo Copying files to %REPO_DIR%...
     xcopy /E /I /Y "%TEMP_DIR%\ClaudeComputerCommander-Unlocked-main\*" "%REPO_DIR%" 2>nul
 )
 
@@ -96,7 +137,7 @@ if not exist "%REPO_DIR%\dist" mkdir "%REPO_DIR%\dist"
 :: Create a minimal index.js file if not already present
 if not exist "%REPO_DIR%\dist\index.js" (
     echo // ClaudeComputerCommander server > "%REPO_DIR%\dist\index.js"
-    echo const config = require('../config.json'); >> "%REPO_DIR%\dist\index.js"
+    echo try { const config = require('../config.json'); } catch (e) { console.log('Config error:', e); } >> "%REPO_DIR%\dist\index.js"
     echo console.log('ClaudeComputerCommander is running...'); >> "%REPO_DIR%\dist\index.js"
 )
 
@@ -112,9 +153,23 @@ echo Creating startup script...
 echo @echo off > "%REPO_DIR%\start-commander.bat"
 echo "%REPO_DIR%\node\node.exe" "%REPO_DIR%\dist\index.js" >> "%REPO_DIR%\start-commander.bat"
 
-:: Update Claude configuration
+:: Create a sample configuration file to show the content needed
+set CONFIG_SAMPLE=%REPO_DIR%\claude_config_sample.json
+echo Creating sample Claude configuration file...
+echo {> "%CONFIG_SAMPLE%"
+echo   "mcpServers": {>> "%CONFIG_SAMPLE%"
+echo     "desktopCommander": {>> "%CONFIG_SAMPLE%"
+echo       "command": "%REPO_DIR:\=\\%\\node\\node.exe",>> "%CONFIG_SAMPLE%"
+echo       "args": [>> "%CONFIG_SAMPLE%"
+echo         "%REPO_DIR:\=\\%\\dist\\index.js">> "%CONFIG_SAMPLE%"
+echo       ]>> "%CONFIG_SAMPLE%"
+echo     }>> "%CONFIG_SAMPLE%"
+echo   }>> "%CONFIG_SAMPLE%"
+echo }>> "%CONFIG_SAMPLE%"
+
+:: Update Claude configuration manually with a direct approach
 echo Updating Claude Desktop configuration...
-powershell -Command "$configPath='%CLAUDE_CONFIG%'; $serverName='desktopCommander'; $nodePath='%REPO_DIR:\=\\%\\node\\node.exe'; $indexPath='%REPO_DIR:\=\\%\\dist\\index.js'; if (Test-Path $configPath) { $config = Get-Content $configPath -Raw | ConvertFrom-Json; if (-not $config.mcpServers) { $config | Add-Member -MemberType NoteProperty -Name 'mcpServers' -Value @{} }; $config.mcpServers.$serverName = @{ 'command' = $nodePath; 'args' = @($indexPath) }; $config | ConvertTo-Json -Depth 10 | Set-Content $configPath; Write-Host 'Updated Claude configuration successfully' }"
+powershell -Command "Write-Host 'Starting manual configuration...'; $configPath='%CLAUDE_CONFIG%'; $nodePath='%REPO_DIR:\=\\%\\node\\node.exe'; $indexPath='%REPO_DIR:\=\\%\\dist\\index.js'; if (Test-Path $configPath) { $configContent = Get-Content $configPath -Raw; try { $config = ConvertFrom-Json $configContent; } catch { Write-Host 'Error parsing config, creating new one'; $config = [PSCustomObject]@{mcpServers=@{}} | ConvertTo-Json -Depth 10 | Set-Content $configPath; $config = ConvertFrom-Json (Get-Content $configPath -Raw); }; if (-not $config.mcpServers) { $config | Add-Member -MemberType NoteProperty -Name 'mcpServers' -Value @{}; }; $newConfig = @{mcpServers=@{}}; $newConfig.mcpServers['desktopCommander'] = @{ 'command' = $nodePath; 'args' = @($indexPath) }; foreach ($prop in $config.PSObject.Properties) { if ($prop.Name -ne 'mcpServers') { $newConfig[$prop.Name] = $prop.Value; } }; ConvertTo-Json $newConfig -Depth 10 | Set-Content $configPath; Write-Host 'Updated Claude configuration successfully'; }"
 
 echo.
 echo Installation completed successfully!
@@ -124,6 +179,12 @@ echo %REPO_DIR%
 echo.
 echo Claude Desktop has been configured to use this installation at:
 echo %CLAUDE_CONFIG%
+echo.
+echo A sample configuration file has been created at:
+echo %CONFIG_SAMPLE%
+echo.
+echo If you need to manually update the Claude configuration,
+echo make sure it looks like the content in the sample file.
 echo.
 echo Please restart Claude Desktop to apply the changes.
 echo If Claude is already running, close it and start it again.
