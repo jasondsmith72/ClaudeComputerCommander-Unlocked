@@ -68,7 +68,7 @@ There are several ways to install ClaudeComputerCommander-Unlocked. All methods 
 
 Choose the installation method that best suits your preferences:
 
-### NEW: PowerShell Installation (RECOMMENDED)
+### PowerShell Installation (RECOMMENDED)
 
 The most reliable installation method using PowerShell:
 
@@ -90,28 +90,26 @@ This script:
 4. Creates a properly formatted configuration file that works with Claude Desktop
 5. Handles all configuration automatically
 
-### Option 1: Ultra-Simple Install
+### Configuration Repair Tools
 
-The absolute simplest installation method:
+If you encounter any issues with Claude Desktop configuration, use these quick repair tools:
 
 #### For Command Prompt (CMD):
 ```cmd
-curl -s https://raw.githubusercontent.com/jasondsmith72/ClaudeComputerCommander-Unlocked/main/simple-install.bat -o simple-install.bat && simple-install.bat
+curl -s https://raw.githubusercontent.com/jasondsmith72/ClaudeComputerCommander-Unlocked/main/fix-json-config.bat -o fix-json-config.bat && fix-json-config.bat
 ```
 
 #### For PowerShell:
 ```powershell
 # Run in PowerShell
-Invoke-WebRequest -Uri "https://raw.githubusercontent.com/jasondsmith72/ClaudeComputerCommander-Unlocked/main/simple-install.bat" -OutFile "simple-install.bat"; ./simple-install.bat
+iwr https://raw.githubusercontent.com/jasondsmith72/ClaudeComputerCommander-Unlocked/main/fix-json-config.ps1 -OutFile fix-json-config.ps1; .\fix-json-config.ps1
 ```
 
-This batch file:
-1. Tries to install Node.js system-wide using winget for better compatibility
-2. Falls back to direct node.exe download if winget is not available
-3. Creates a minimal, streamlined installation
-4. Uses direct file copying rather than complex scripts
-5. Works on virtually any Windows system
-6. Perfect for troubleshooting when other methods fail
+These repair tools will:
+1. Fix any JSON syntax errors in your Claude Desktop configuration
+2. Create a backup of your existing configuration
+3. Generate a properly formatted configuration file
+4. Fix the most common configuration issues
 
 ### Option 2: Quick Install
 
@@ -134,27 +132,6 @@ This batch file:
 3. Sets up everything automatically with zero dependencies
 4. Works even on locked-down systems where you can't install software
 5. Run as Administrator if possible for best results
-
-### Configuration Repair Tools
-
-If you encounter any issues with Claude Desktop configuration, use these quick repair tools:
-
-#### For Command Prompt (CMD):
-```cmd
-curl -s https://raw.githubusercontent.com/jasondsmith72/ClaudeComputerCommander-Unlocked/main/fix-json-config.bat -o fix-json-config.bat && fix-json-config.bat
-```
-
-#### For PowerShell:
-```powershell
-# Run in PowerShell
-iwr https://raw.githubusercontent.com/jasondsmith72/ClaudeComputerCommander-Unlocked/main/fix-json-config.ps1 -OutFile fix-json-config.ps1; .\fix-json-config.ps1
-```
-
-These repair tools will:
-1. Fix any JSON syntax errors in your Claude Desktop configuration
-2. Create a backup of your existing configuration
-3. Generate a properly formatted configuration file
-4. Fix the most common configuration issues
 
 ### Option 3: Complete Install with Claude Detection
 
@@ -346,7 +323,6 @@ If you encounter any issues with the installation or configuration:
 
 3. **Installation Fails** - If all installation methods fail:
    - Try running as Administrator
-   - Try the simple-install.bat which has the most direct approach
    - Check your system for any security software that might be blocking the installation
 
 ## Configuration Options
