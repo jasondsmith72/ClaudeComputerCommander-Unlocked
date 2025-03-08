@@ -22,52 +22,150 @@ function Test-CommandExists {
 function Install-NodeJS {
     Write-Host "Installing Node.js..." -ForegroundColor Yellow
     
-    # Create temp directory
-    $tempDir = Join-Path $env:USERPROFILE "temp_node_install"
-    if (-not (Test-Path $tempDir)) {
-        New-Item -ItemType Directory -Path $tempDir -Force | Out-Null
-    }
+    # We'll try multiple Node.js installation methods to increase chances of success
     
-    # Download Node.js installer
-    $installerPath = Join-Path $tempDir "node_installer.msi"
-    Write-Host "Downloading Node.js installer (this might take a minute)..." -ForegroundColor Yellow
-    
+    # Method 1: Direct download and run executable installer
     try {
-        Invoke-WebRequest -Uri "https://nodejs.org/dist/v20.11.1/node-v20.11.1-x64.msi" -OutFile $installerPath
+        Write-Host "Trying Node.js installation method 1 (executable installer)..." -ForegroundColor Yellow
+        $tempDir = Join-Path $env:USERPROFILE "temp_node_install"
+        if (-not (Test-Path $tempDir)) {
+            New-Item -ItemType Directory -Path $tempDir -Force | Out-Null
+        }
+        
+        # Download Node.js executable installer
+        $installerPath = Join-Path $tempDir "node_installer.exe"
+        Write-Host "Downloading Node.js installer (this might take a minute)..." -ForegroundColor Yellow
+        
+        try {
+            Invoke-WebRequest -Uri "https://nodejs.org/dist/v20.11.1/node-v20.11.1-x64.msi" -OutFile $installerPath
+        } catch {
+            Write-Host "Failed to download Node.js installer MSI: $_" -ForegroundColor Red
+            throw
+        }
+        
+        # Install Node.js
+        Write-Host "Installing Node.js..." -ForegroundColor Yellow
+        
+        try {
+            # Try with different options to ensure success
+            # Use /qn for completely silent installation
+            $result = Start-Process -FilePath "msiexec.exe" -ArgumentList "/i `"$installerPath`" /qn" -Wait -PassThru
+            
+            if ($result.ExitCode -ne 0) {
+                Write-Host "MSI installation failed with exit code: $($result.ExitCode)" -ForegroundColor Red
+                throw "MSI installation failed"
+            }
+        } catch {
+            Write-Host "Failed to install Node.js via MSI: $_" -ForegroundColor Red
+            throw
+        }
     } catch {
-        Write-Host "Failed to download Node.js installer: $_" -ForegroundColor Red
-        exit 1
-    }
-    
-    # Install Node.js with necessary tools for native modules
-    Write-Host "Installing Node.js with tools for native modules..." -ForegroundColor Yellow
-    try {
-        Start-Process -FilePath "msiexec.exe" -ArgumentList "/i `"$installerPath`" /qb ADDLOCAL=NodeRuntime,npm,DocumentationShortcuts,EnvironmentPathNode,EnvironmentPathNpmModules,AssociateJs,AssociatedFiles,NodePerfCounters INSTALLLEVEL=1 /norestart" -Wait
-    } catch {
-        Write-Host "Failed to install Node.js: $_" -ForegroundColor Red
-        exit 1
+        # If MSI fails, try the .exe installer
+        Write-Host "MSI installer failed, trying executable installer instead..." -ForegroundColor Yellow
+        
+        try {
+            $tempDir = Join-Path $env:USERPROFILE "temp_node_install"
+            if (-not (Test-Path $tempDir)) {
+                New-Item -ItemType Directory -Path $tempDir -Force | Out-Null
+            }
+            
+            $installerPath = Join-Path $tempDir "node_installer.exe"
+            
+            # Download .exe installer
+            Invoke-WebRequest -Uri "https://nodejs.org/dist/v20.11.1/node-v20.11.1-x64.exe" -OutFile $installerPath
+            
+            # Install using .exe with silent options
+            $result = Start-Process -FilePath $installerPath -ArgumentList "/S" -Wait -PassThru
+            
+            if ($result.ExitCode -ne 0) {
+                Write-Host "EXE installation failed with exit code: $($result.ExitCode)" -ForegroundColor Red
+                throw "EXE installation failed"
+            }
+        } catch {
+            Write-Host "Both MSI and EXE installation methods failed" -ForegroundColor Red
+            
+            # As a last resort, try the Windows nvm (Node Version Manager) approach
+            Write-Host "Trying installation via nvm-windows as a last resort..." -ForegroundColor Yellow
+            
+            try {
+                # Download nvm-windows installer
+                $nvmInstallerPath = Join-Path $tempDir "nvm-setup.exe"
+                Invoke-WebRequest -Uri "https://github.com/coreybutler/nvm-windows/releases/download/1.1.11/nvm-setup.exe" -OutFile $nvmInstallerPath
+                
+                # Install nvm-windows
+                Start-Process -FilePath $nvmInstallerPath -ArgumentList "/SILENT" -Wait
+                
+                # Need to refresh environment variables
+                $env:Path = [System.Environment]::GetEnvironmentVariable("Path", "Machine") + ";" + [System.Environment]::GetEnvironmentVariable("Path", "User")
+                
+                # Use nvm to install Node.js
+                Start-Process -FilePath "nvm" -ArgumentList "install 20.11.1" -Wait
+                Start-Process -FilePath "nvm" -ArgumentList "use 20.11.1" -Wait
+                
+            } catch {
+                Write-Host "All Node.js installation methods failed." -ForegroundColor Red
+                Write-Host "Please install Node.js manually from https://nodejs.org/en/download/" -ForegroundColor Red
+                Write-Host "After installing Node.js, restart this script." -ForegroundColor Yellow
+                exit 1
+            }
+        }
     }
     
     # Refresh PATH environment variable
     $env:Path = [System.Environment]::GetEnvironmentVariable("Path", "Machine") + ";" + [System.Environment]::GetEnvironmentVariable("Path", "User")
     
     # Verify installation
-    if (Test-CommandExists "node") {
+    $maxRetries = 3
+    $retryCount = 0
+    $success = $false
+    
+    while (-not $success -and $retryCount -lt $maxRetries) {
+        Start-Sleep -Seconds 2  # Wait for installation to complete
+        if (Test-CommandExists "node") {
+            $success = $true
+        } else {
+            $retryCount++
+            Write-Host "Node.js not detected in PATH yet, retrying... ($retryCount/$maxRetries)" -ForegroundColor Yellow
+        }
+    }
+    
+    if ($success) {
         $nodeVersion = node --version
         $npmVersion = npm --version
         Write-Host "Node.js $nodeVersion and npm $npmVersion installed successfully" -ForegroundColor Green
     } else {
-        Write-Host "Node.js installation might have failed. Please try installing manually from https://nodejs.org/en/download/" -ForegroundColor Red
-        exit 1
+        Write-Host "Node.js installation didn't register in PATH." -ForegroundColor Red
+        Write-Host "Proceeding with manual setup..." -ForegroundColor Yellow
+        
+        # Attempt to use common Node.js installation paths
+        $possibleNodePaths = @(
+            "C:\Program Files\nodejs",
+            "C:\Program Files (x86)\nodejs",
+            "$env:USERPROFILE\AppData\Roaming\nvm\v20.11.1"
+        )
+        
+        foreach ($path in $possibleNodePaths) {
+            if (Test-Path $path) {
+                Write-Host "Found Node.js installation at $path, adding to PATH" -ForegroundColor Yellow
+                $env:Path = "$path;$env:Path"
+                break
+            }
+        }
+        
+        # Final check
+        if (Test-CommandExists "node") {
+            $nodeVersion = node --version
+            $npmVersion = npm --version
+            Write-Host "Node.js $nodeVersion and npm $npmVersion found and added to PATH" -ForegroundColor Green
+            return $true
+        } else {
+            Write-Host "Unable to locate Node.js installation." -ForegroundColor Red
+            Write-Host "Please install Node.js manually from https://nodejs.org/en/download/" -ForegroundColor Red
+            return $false
+        }
     }
     
-    # Clean up
-    try {
-        Remove-Item $installerPath -Force
-        Write-Host "Cleaned up temporary files" -ForegroundColor Green
-    } catch {
-        Write-Host "Failed to clean up temporary files, but installation will proceed" -ForegroundColor Yellow
-    }
+    return $true
 }
 
 function Install-Git {
@@ -123,6 +221,59 @@ function Install-Git {
     }
 }
 
+function Direct-Download-Repository {
+    Write-Host "Downloading repository as ZIP..." -ForegroundColor Yellow
+    
+    $repoDir = Join-Path $env:USERPROFILE "ClaudeComputerCommander-Unlocked"
+    $tempZip = Join-Path $env:USERPROFILE "claude_commander.zip"
+    
+    # Make sure target directory exists and is empty
+    if (Test-Path $repoDir) {
+        Write-Host "Removing existing repository folder..." -ForegroundColor Yellow
+        Remove-Item $repoDir -Recurse -Force
+    }
+    
+    New-Item -ItemType Directory -Path $repoDir -Force | Out-Null
+    
+    # Download directly from GitHub
+    try {
+        Invoke-WebRequest -Uri "https://github.com/jasondsmith72/ClaudeComputerCommander-Unlocked/archive/refs/heads/main.zip" -OutFile $tempZip -UseBasicParsing
+    } catch {
+        Write-Host "Failed to download repository: $_" -ForegroundColor Red
+        exit 1
+    }
+    
+    # Extract with PowerShell
+    try {
+        Write-Host "Extracting ZIP file..." -ForegroundColor Yellow
+        Add-Type -AssemblyName System.IO.Compression.FileSystem
+        [System.IO.Compression.ZipFile]::ExtractToDirectory($tempZip, $env:USERPROFILE)
+    } catch {
+        Write-Host "Failed to extract repository: $_" -ForegroundColor Red
+        exit 1
+    }
+    
+    # Move contents from extracted directory to target
+    try {
+        Write-Host "Moving files to target directory..." -ForegroundColor Yellow
+        Get-ChildItem -Path (Join-Path $env:USERPROFILE "ClaudeComputerCommander-Unlocked-main") | Move-Item -Destination $repoDir -Force
+    } catch {
+        Write-Host "Failed to move repository files: $_" -ForegroundColor Red
+        exit 1
+    }
+    
+    # Clean up
+    try {
+        Remove-Item $tempZip -Force
+        Remove-Item (Join-Path $env:USERPROFILE "ClaudeComputerCommander-Unlocked-main") -Recurse -Force
+    } catch {
+        Write-Host "Failed to clean up temporary files, but installation will proceed" -ForegroundColor Yellow
+    }
+    
+    Write-Host "Repository downloaded and extracted to $repoDir" -ForegroundColor Green
+    return $repoDir
+}
+
 function Check-ClaudeDesktop {
     $claudeConfigPath = Join-Path $env:APPDATA "Claude\claude_desktop_config.json"
     if (-not (Test-Path $claudeConfigPath)) {
@@ -153,47 +304,12 @@ function Get-Repository {
                 git clone "https://github.com/jasondsmith72/ClaudeComputerCommander-Unlocked.git" $repoDir
             } catch {
                 Write-Host "Failed to clone repository: $_" -ForegroundColor Red
-                exit 1
+                Write-Host "Falling back to direct download..." -ForegroundColor Yellow
+                return Direct-Download-Repository
             }
         } else {
             # Download as ZIP and extract
-            Write-Host "Downloading repository as ZIP..." -ForegroundColor Yellow
-            $tempZip = Join-Path $env:USERPROFILE "claude_commander.zip"
-            
-            # Download with PowerShell
-            try {
-                Invoke-WebRequest -Uri "https://github.com/jasondsmith72/ClaudeComputerCommander-Unlocked/archive/refs/heads/main.zip" -OutFile $tempZip
-            } catch {
-                Write-Host "Failed to download repository: $_" -ForegroundColor Red
-                exit 1
-            }
-            
-            # Create directory
-            New-Item -ItemType Directory -Path $repoDir -Force | Out-Null
-            
-            # Extract with PowerShell
-            try {
-                Expand-Archive -Path $tempZip -DestinationPath $env:USERPROFILE -Force
-            } catch {
-                Write-Host "Failed to extract repository: $_" -ForegroundColor Red
-                exit 1
-            }
-            
-            # Move contents from extracted directory to target
-            try {
-                Get-ChildItem -Path (Join-Path $env:USERPROFILE "ClaudeComputerCommander-Unlocked-main") | Move-Item -Destination $repoDir -Force
-            } catch {
-                Write-Host "Failed to move repository files: $_" -ForegroundColor Red
-                exit 1
-            }
-            
-            # Clean up
-            try {
-                Remove-Item $tempZip -Force
-                Remove-Item (Join-Path $env:USERPROFILE "ClaudeComputerCommander-Unlocked-main") -Recurse -Force
-            } catch {
-                Write-Host "Failed to clean up temporary files, but installation will proceed" -ForegroundColor Yellow
-            }
+            return Direct-Download-Repository
         }
         
         Write-Host "Repository set up at $repoDir" -ForegroundColor Green
@@ -209,7 +325,58 @@ function Install-Dependencies {
     
     Push-Location $repoDir
     try {
-        npm install
+        # Ensure npm is in PATH
+        if (-not (Test-CommandExists "npm")) {
+            Write-Host "npm not found in PATH, checking for Node.js installation..." -ForegroundColor Yellow
+            
+            # Try to locate npm in common locations
+            $possibleNpmPaths = @(
+                "C:\Program Files\nodejs",
+                "C:\Program Files (x86)\nodejs",
+                "$env:USERPROFILE\AppData\Roaming\nvm\v*"
+            )
+            
+            $npmFound = $false
+            foreach ($basePath in $possibleNpmPaths) {
+                $npmPath = $null
+                if ($basePath -like "*\v*") {
+                    # Handle nvm path pattern with wildcard
+                    $nvmDirs = Get-ChildItem -Path ($basePath -replace "v\*", "") -Directory -ErrorAction SilentlyContinue | Where-Object { $_.Name -like "v*" }
+                    foreach ($dir in $nvmDirs) {
+                        if (Test-Path (Join-Path $dir.FullName "npm.cmd")) {
+                            $npmPath = $dir.FullName
+                            break
+                        }
+                    }
+                } else {
+                    # Regular path
+                    if (Test-Path (Join-Path $basePath "npm.cmd")) {
+                        $npmPath = $basePath
+                    }
+                }
+                
+                if ($npmPath) {
+                    Write-Host "Found npm at $npmPath, adding to PATH" -ForegroundColor Yellow
+                    $env:Path = "$npmPath;$env:Path"
+                    $npmFound = $true
+                    break
+                }
+            }
+            
+            if (-not $npmFound) {
+                Write-Host "npm not found. Node.js installation might be incomplete." -ForegroundColor Red
+                Write-Host "Please install Node.js manually from https://nodejs.org/en/download/" -ForegroundColor Red
+                exit 1
+            }
+        }
+        
+        # Install dependencies with npm
+        $result = Start-Process -FilePath "npm" -ArgumentList "install" -Wait -PassThru -NoNewWindow
+        if ($result.ExitCode -ne 0) {
+            Write-Host "npm install failed with exit code: $($result.ExitCode)" -ForegroundColor Red
+            throw "npm install failed"
+        }
+        
         Write-Host "Dependencies installed successfully" -ForegroundColor Green
     } catch {
         Write-Host "Failed to install dependencies: $_" -ForegroundColor Red
@@ -274,7 +441,12 @@ function Build-Project {
     
     Push-Location $repoDir
     try {
-        npm run build
+        $result = Start-Process -FilePath "npm" -ArgumentList "run build" -Wait -PassThru -NoNewWindow
+        if ($result.ExitCode -ne 0) {
+            Write-Host "npm build failed with exit code: $($result.ExitCode)" -ForegroundColor Red
+            throw "npm build failed"
+        }
+        
         Write-Host "Project built successfully" -ForegroundColor Green
     } catch {
         Write-Host "Failed to build project: $_" -ForegroundColor Red
@@ -286,12 +458,22 @@ function Build-Project {
 
 # Main installation flow
 try {
+    # Check for Administrator privileges
+    $isAdmin = ([Security.Principal.WindowsPrincipal] [Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole] "Administrator")
+    if (-not $isAdmin) {
+        Write-Host "* Run in PowerShell as Administrator" -ForegroundColor Green
+    }
+    
     # Step 1: Check prerequisites and install if missing
     
     # Check for Node.js and npm
     if (-not (Test-CommandExists "node") -or -not (Test-CommandExists "npm")) {
         Write-Host "Node.js is not installed or not in PATH" -ForegroundColor Yellow
-        Install-NodeJS
+        $nodeInstalled = Install-NodeJS
+        if (-not $nodeInstalled) {
+            Write-Host "Node.js installation failed. Please install Node.js manually from https://nodejs.org/en/download/" -ForegroundColor Red
+            exit 1
+        }
     } else {
         $nodeVersion = node --version
         $npmVersion = npm --version
