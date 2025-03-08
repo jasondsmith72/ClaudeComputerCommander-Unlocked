@@ -121,6 +121,38 @@ Several pre-configured setup options are available:
 - `config-improved.json`: Enhanced capabilities without full unrestricted access
 - `config-simple.json`: Basic functionality for simple use cases
 
+#### How to Use Configuration Files
+
+By default:
+- The guided auto-installer will use `config-unrestricted.json` as the default configuration
+- The direct installation scripts also use `config-unrestricted.json` by default
+
+To use a different configuration:
+
+1. After installation, copy your preferred configuration to `config.json`:
+   ```
+   # For example, to use the administrator configuration:
+   cp config-administrator.json config.json
+   ```
+
+2. If the server is already running, restart it or restart Claude Desktop
+
+3. If you want to switch configurations later:
+   ```
+   # First, make a backup of your current config
+   cp config.json config-backup.json
+   
+   # Then copy the new configuration
+   cp config-improved.json config.json
+   ```
+
+Each configuration offers different security and capability levels:
+- `config-unrestricted.json`: No filesystem restrictions, allowing access to any file
+- `config-administrator.json`: Elevated permissions with some filesystem restrictions
+- `config-admin-unrestricted.json`: Most powerful option with admin privileges + unrestricted access
+- `config-improved.json`: Enhanced capabilities with reasonable security restrictions
+- `config-simple.json`: Most restrictive with limited access to secure directories only
+
 ### Uninstalling
 
 To uninstall ClaudeComputerCommander-Unlocked:
