@@ -29,6 +29,17 @@ if not exist "%CLAUDE_CONFIG_DIR%" mkdir "%CLAUDE_CONFIG_DIR%"
 
 set CLAUDE_CONFIG=%CLAUDE_CONFIG_DIR%\claude_desktop_config.json
 
+:: Backup existing config file if it exists
+set BACKUP_CREATED=0
+if exist "%CLAUDE_CONFIG%" (
+    for /f "tokens=2-4 delims=/ " %%a in ('date /t') do (set DATE=%%c-%%a-%%b)
+    for /f "tokens=1-2 delims=: " %%a in ('time /t') do (set TIME=%%a-%%b)
+    set BACKUP_FILE=%CLAUDE_CONFIG_DIR%\claude_desktop_config-bk-%DATE%-%TIME%.json
+    copy "%CLAUDE_CONFIG%" "%BACKUP_FILE%" > nul
+    echo Created backup of existing config: %BACKUP_FILE%
+    set BACKUP_CREATED=1
+)
+
 :: 3. Check if Node.js is already installed
 echo Checking for Node.js...
 where node >nul 2>&1
@@ -105,23 +116,53 @@ if "%USE_SYSTEM_NODE%"=="1" (
     echo "%NODE_DIR%\node.exe" "%REPO_DIR%\dist\index.js" >> "%REPO_DIR%\start-commander.bat"
 )
 
-:: 7. Create Claude configuration using PowerShell for reliable JSON formatting
+:: 7. Create Claude configuration using a direct, explicit method
 echo Updating Claude Desktop configuration...
 
+:: Prepare the JSON data with proper path escaping
 set INDEX_PATH=%REPO_DIR%\dist\index.js
 set INDEX_PATH=%INDEX_PATH:\=\\%
 
-:: Use PowerShell to create a valid JSON file
+:: Use a more direct approach to create the JSON file without any potential encoding issues
 if "%USE_SYSTEM_NODE%"=="1" (
-    powershell -Command "$config = @{ mcpServers = @{ desktopCommander = @{ command = 'node'; args = @('%INDEX_PATH%') } } }; $jsonString = $config | ConvertTo-Json -Depth 10; Set-Content -Path '%CLAUDE_CONFIG%' -Value $jsonString -Encoding UTF8"
+    :: Create an ultra-simple JSON file with minimal syntax directly
+    (
+        echo {
+        echo   "mcpServers": {
+        echo     "desktopCommander": {
+        echo       "command": "node",
+        echo       "args": [
+        echo         "%INDEX_PATH%"
+        echo       ]
+        echo     }
+        echo   }
+        echo }
+    ) > "%CLAUDE_CONFIG%.tmp"
 ) else (
     set NODE_EXE_PATH=%NODE_DIR%\node.exe
     set NODE_EXE_PATH=%NODE_EXE_PATH:\=\\%
-    powershell -Command "$config = @{ mcpServers = @{ desktopCommander = @{ command = '%NODE_EXE_PATH%'; args = @('%INDEX_PATH%') } } }; $jsonString = $config | ConvertTo-Json -Depth 10; Set-Content -Path '%CLAUDE_CONFIG%' -Value $jsonString -Encoding UTF8"
+    (
+        echo {
+        echo   "mcpServers": {
+        echo     "desktopCommander": {
+        echo       "command": "%NODE_EXE_PATH%",
+        echo       "args": [
+        echo         "%INDEX_PATH%"
+        echo       ]
+        echo     }
+        echo   }
+        echo }
+    ) > "%CLAUDE_CONFIG%.tmp"
 )
 
-:: 8. Verify the JSON file is valid
-powershell -Command "try { Get-Content '%CLAUDE_CONFIG%' | ConvertFrom-Json; Write-Host 'JSON validation successful!' -ForegroundColor Green } catch { Write-Host 'ERROR: Invalid JSON created. Please check the file manually.' -ForegroundColor Red }"
+:: Now use PowerShell to validate and clean the JSON
+powershell -Command "$ErrorActionPreference = 'Stop'; try { $content = Get-Content -Path '%CLAUDE_CONFIG%.tmp' -Raw; $json = ConvertFrom-Json -InputObject $content; $cleanJson = $json | ConvertTo-Json -Depth 10; [System.IO.File]::WriteAllText('%CLAUDE_CONFIG%', $cleanJson, [System.Text.Encoding]::UTF8); Write-Host 'JSON validation and cleanup successful!' -ForegroundColor Green } catch { Write-Host 'JSON validation failed. Using fallback method...' -ForegroundColor Yellow; $json = New-Object PSObject -Property @{ mcpServers = @{ desktopCommander = @{ command = if ('%USE_SYSTEM_NODE%' -eq '1') {'node'} else {'%NODE_EXE_PATH%'}; args = @('%INDEX_PATH%') } } }; $jsonString = $json | ConvertTo-Json -Depth 10; [System.IO.File]::WriteAllText('%CLAUDE_CONFIG%', $jsonString, [System.Text.Encoding]::UTF8); }"
+
+:: Delete the temporary file
+del "%CLAUDE_CONFIG%.tmp" 2>nul
+
+:: 8. Final check to make sure the JSON file is valid
+powershell -Command "try { $json = Get-Content '%CLAUDE_CONFIG%' -Raw | ConvertFrom-Json; Write-Host 'Final JSON validation successful!' -ForegroundColor Green } catch { Write-Host 'ERROR: JSON file is still invalid. Please check manually.' -ForegroundColor Red }"
 
 echo.
 echo Installation completed successfully!
@@ -138,6 +179,13 @@ echo.
 echo Claude Desktop has been configured to use this installation at:
 echo %CLAUDE_CONFIG%
 echo.
+
+if "%BACKUP_CREATED%"=="1" (
+    echo A backup of your previous configuration was created at:
+    echo %BACKUP_FILE%
+    echo.
+)
+
 echo Please restart Claude Desktop to apply the changes.
 echo If Claude is already running, close it and start it again.
 echo.
