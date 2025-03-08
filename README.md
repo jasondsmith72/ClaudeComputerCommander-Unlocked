@@ -72,11 +72,6 @@ Choose the installation method that best suits your preferences:
 
 The most reliable installation method using PowerShell:
 
-#### For Command Prompt (CMD):
-```cmd
-curl -s https://raw.githubusercontent.com/jasondsmith72/ClaudeComputerCommander-Unlocked/main/simple-install-ps.bat -o simple-install-ps.bat && simple-install-ps.bat
-```
-
 #### For PowerShell:
 ```powershell
 # Run in PowerShell
@@ -94,11 +89,6 @@ This script:
 
 If you encounter any issues with Claude Desktop configuration, use these quick repair tools:
 
-#### For Command Prompt (CMD):
-```cmd
-curl -s https://raw.githubusercontent.com/jasondsmith72/ClaudeComputerCommander-Unlocked/main/fix-json-config.bat -o fix-json-config.bat && fix-json-config.bat
-```
-
 #### For PowerShell:
 ```powershell
 # Run in PowerShell
@@ -114,11 +104,6 @@ These repair tools will:
 ### Option 2: Quick Install
 
 Standard installation with more features:
-
-#### For Command Prompt (CMD):
-```cmd
-curl -s https://raw.githubusercontent.com/jasondsmith72/ClaudeComputerCommander-Unlocked/main/direct-install.bat -o direct-install.bat && direct-install.bat
-```
 
 #### For PowerShell:
 ```powershell
@@ -137,11 +122,6 @@ This batch file:
 
 If you want a more thorough installation that can help you install Claude if needed:
 
-#### For Command Prompt (CMD):
-```cmd
-curl -s https://raw.githubusercontent.com/jasondsmith72/ClaudeComputerCommander-Unlocked/main/force-install.bat -o force-install.bat && force-install.bat
-```
-
 #### For PowerShell:
 ```powershell
 # Run in PowerShell
@@ -158,11 +138,6 @@ This script:
 ### Option 4: Diagnostic & Manual Install
 
 If you're having trouble and want to diagnose Claude configuration issues:
-
-#### For Command Prompt (CMD):
-```cmd
-curl -s https://raw.githubusercontent.com/jasondsmith72/ClaudeComputerCommander-Unlocked/main/find-claude-config.bat -o find-claude-config.bat && find-claude-config.bat
-```
 
 #### For PowerShell:
 ```powershell
@@ -199,11 +174,6 @@ If you already have Node.js installed:
 Invoke-WebRequest -Uri "https://raw.githubusercontent.com/jasondsmith72/ClaudeComputerCommander-Unlocked/main/install-windows.js" -OutFile "install-windows.js"; node install-windows.js
 ```
 
-#### Windows (Command Prompt):
-```cmd
-curl -s https://raw.githubusercontent.com/jasondsmith72/ClaudeComputerCommander-Unlocked/main/install-windows.js -o install-windows.js & node install-windows.js
-```
-
 #### macOS/Linux:
 ```bash
 curl -s https://raw.githubusercontent.com/jasondsmith72/ClaudeComputerCommander-Unlocked/main/install-mac-linux.js -o install-mac-linux.js && node install-mac-linux.js
@@ -212,11 +182,6 @@ curl -s https://raw.githubusercontent.com/jasondsmith72/ClaudeComputerCommander-
 ### Option 7: Winget Installation
 
 For Windows 10/11 users who prefer to install Node.js system-wide:
-
-#### For Command Prompt (CMD):
-```cmd
-curl -s https://raw.githubusercontent.com/jasondsmith72/ClaudeComputerCommander-Unlocked/main/winget-install.bat -o winget-install.bat && winget-install.bat
-```
 
 #### For PowerShell:
 ```powershell
@@ -313,9 +278,7 @@ If the automatic configuration fails, you can manually configure Claude Desktop:
 If you encounter any issues with the installation or configuration:
 
 1. **JSON Configuration Errors** - If Claude Desktop shows a "Could not load app settings" error:
-   ```cmd
-   curl -s https://raw.githubusercontent.com/jasondsmith72/ClaudeComputerCommander-Unlocked/main/fix-json-config.bat -o fix-json-config.bat && fix-json-config.bat
-   ```
+   - Use the PowerShell repair script to fix configuration issues
    
 2. **Node.js Detection Issues** - If the installer doesn't properly detect your Node.js installation:
    - Try running the PowerShell installer which has better detection logic
