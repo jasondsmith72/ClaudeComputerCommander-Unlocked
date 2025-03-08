@@ -28,6 +28,16 @@ if (-not (Test-Path $ClaudeConfigDir)) {
 }
 $ClaudeConfig = Join-Path $ClaudeConfigDir "claude_desktop_config.json"
 
+# Check if config exists and create a backup with date/time stamp
+$BackupCreated = $false
+if (Test-Path $ClaudeConfig) {
+    $Timestamp = Get-Date -Format "yyyy-MM-dd-HH.mm"
+    $BackupFile = "$ClaudeConfigDir\claude_desktop_config-bk-$Timestamp.json"
+    Copy-Item -Path $ClaudeConfig -Destination $BackupFile -Force
+    Write-Host "Created backup of existing config at: $BackupFile" -ForegroundColor Green
+    $BackupCreated = $true
+}
+
 # Create Claude config file if it doesn't exist
 if (-not (Test-Path $ClaudeConfig)) {
     Write-Host "Creating Claude Desktop configuration file..."
@@ -242,6 +252,13 @@ Write-Host ""
 Write-Host "Claude Desktop has been configured to use this installation at:"
 Write-Host $ClaudeConfig -ForegroundColor Cyan
 Write-Host ""
+
+if ($BackupCreated) {
+    Write-Host "A backup of your previous configuration was created at:"
+    Write-Host $BackupFile -ForegroundColor Cyan
+    Write-Host ""
+}
+
 Write-Host "Please restart Claude Desktop to apply the changes."
 Write-Host "If Claude is already running, close it and start it again."
 Write-Host ""
