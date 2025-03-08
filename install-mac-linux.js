@@ -3,16 +3,15 @@
 /**
  * All-in-one installation script for ClaudeComputerCommander-Unlocked on macOS/Linux
  * This script handles:
- * 1. Checking for prerequisites
- * 2. Installing them if missing
- * 3. Cloning the repository
- * 4. Setting up the integration with Claude Desktop
+ * 1. Checking for prerequisites and installing them if missing
+ * 2. Cloning the repository
+ * 3. Setting up the integration with Claude Desktop
  */
 
 import { execSync } from 'child_process';
-import { existsSync, mkdirSync, writeFileSync, readFileSync } from 'fs';
+import { existsSync, mkdirSync, writeFileSync, readFileSync, unlinkSync } from 'fs';
 import { join, resolve } from 'path';
-import { homedir } from 'os';
+import { homedir, platform } from 'os';
 
 // Define log levels and colors for console output
 const LOG_LEVELS = {
@@ -27,9 +26,9 @@ function log(message, level = 'INFO') {
   console.log(LOG_LEVELS[level], `[${level}] ${message}`);
 }
 
-function executeCommand(command, errorMessage) {
+function executeCommand(command, errorMessage, silent = false) {
   try {
-    return execSync(command, { stdio: 'pipe' }).toString().trim();
+    return execSync(command, { stdio: silent ? 'pipe' : 'inherit' }).toString().trim();
   } catch (error) {
     if (errorMessage) {
       log(errorMessage, 'ERROR');
@@ -39,31 +38,229 @@ function executeCommand(command, errorMessage) {
   }
 }
 
-// Check prerequisites
-async function checkPrerequisites() {
+// Determine if we're on macOS
+const isMac = platform() === 'darwin';
+
+// Install Node.js if missing (macOS)
+async function installNodeJsMac() {
+  log('Installing Node.js on macOS...');
+  
+  // Check if Homebrew is installed
+  const brewInstalled = executeCommand('which brew', null, true);
+  if (!brewInstalled) {
+    log('Homebrew is not installed. Installing Homebrew first...', 'INFO');
+    executeCommand(
+      '/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"',
+      'Failed to install Homebrew. Please install it manually from https://brew.sh/'
+    );
+    
+    // Update PATH for current session
+    const brewPath = '/opt/homebrew/bin:/usr/local/bin';
+    process.env.PATH = `${brewPath}:${process.env.PATH}`;
+    
+    // Verify Homebrew installation
+    const brewVerify = executeCommand('which brew', null, true);
+    if (!brewVerify) {
+      log('Failed to install Homebrew. Please install it manually from https://brew.sh/', 'ERROR');
+      return false;
+    }
+  }
+  
+  // Install Node.js via Homebrew
+  log('Installing Node.js via Homebrew...');
+  executeCommand('brew install node', 'Failed to install Node.js via Homebrew');
+  
+  // Install native module compilation tools
+  log('Installing tools for native modules...');
+  executeCommand('xcode-select --install || true', 'Note: Developer command-line tools installation might require user interaction');
+  
+  // Verify installation
+  const nodeVersion = executeCommand('node --version', null, true);
+  const npmVersion = executeCommand('npm --version', null, true);
+  
+  if (nodeVersion && npmVersion) {
+    log(`Node.js ${nodeVersion} and npm ${npmVersion} installed successfully`, 'SUCCESS');
+    return true;
+  } else {
+    log('Node.js installation might have failed. Please try installing manually from https://nodejs.org/en/download/', 'ERROR');
+    return false;
+  }
+}
+
+// Install Node.js if missing (Linux)
+async function installNodeJsLinux() {
+  log('Installing Node.js on Linux...');
+  
+  // Detect the Linux distribution
+  let distro = '';
+  if (existsSync('/etc/debian_version')) {
+    distro = 'debian';
+  } else if (existsSync('/etc/fedora-release')) {
+    distro = 'fedora';
+  } else if (existsSync('/etc/redhat-release')) {
+    distro = 'redhat';
+  } else if (existsSync('/etc/arch-release')) {
+    distro = 'arch';
+  } else {
+    log('Unsupported Linux distribution. Please install Node.js manually from https://nodejs.org/en/download/', 'ERROR');
+    return false;
+  }
+  
+  // Install Node.js based on the distribution
+  if (distro === 'debian') {
+    // For Debian/Ubuntu
+    log('Detected Debian/Ubuntu-based distribution');
+    log('Updating package index...');
+    executeCommand('sudo apt-get update', 'Failed to update package index');
+    
+    log('Installing Node.js via apt...');
+    executeCommand('sudo apt-get install -y nodejs npm build-essential', 'Failed to install Node.js via apt');
+  } else if (distro === 'fedora') {
+    // For Fedora
+    log('Detected Fedora-based distribution');
+    log('Installing Node.js via dnf...');
+    executeCommand('sudo dnf install -y nodejs npm gcc-c++ make', 'Failed to install Node.js via dnf');
+  } else if (distro === 'redhat') {
+    // For RHEL/CentOS
+    log('Detected RHEL/CentOS-based distribution');
+    log('Installing Node.js via yum...');
+    executeCommand('sudo yum install -y nodejs npm gcc-c++ make', 'Failed to install Node.js via yum');
+  } else if (distro === 'arch') {
+    // For Arch Linux
+    log('Detected Arch-based distribution');
+    log('Installing Node.js via pacman...');
+    executeCommand('sudo pacman -S --noconfirm nodejs npm base-devel', 'Failed to install Node.js via pacman');
+  }
+  
+  // Verify installation
+  const nodeVersion = executeCommand('node --version', null, true);
+  const npmVersion = executeCommand('npm --version', null, true);
+  
+  if (nodeVersion && npmVersion) {
+    log(`Node.js ${nodeVersion} and npm ${npmVersion} installed successfully`, 'SUCCESS');
+    return true;
+  } else {
+    log('Node.js installation might have failed. Please try installing manually from https://nodejs.org/en/download/', 'ERROR');
+    return false;
+  }
+}
+
+// Install Git if missing (macOS)
+async function installGitMac() {
+  log('Installing Git on macOS...');
+  
+  // Check if Homebrew is installed
+  const brewInstalled = executeCommand('which brew', null, true);
+  if (!brewInstalled) {
+    // Homebrew should be installed by the Node.js installation step
+    log('Homebrew not found. Please install it manually from https://brew.sh/', 'ERROR');
+    return false;
+  }
+  
+  // Install Git via Homebrew
+  log('Installing Git via Homebrew...');
+  executeCommand('brew install git', 'Failed to install Git via Homebrew');
+  
+  // Verify installation
+  const gitVersion = executeCommand('git --version', null, true);
+  
+  if (gitVersion) {
+    log(`Git ${gitVersion} installed successfully`, 'SUCCESS');
+    return true;
+  } else {
+    log('Git installation might have failed, but will continue without Git', 'WARN');
+    return false;
+  }
+}
+
+// Install Git if missing (Linux)
+async function installGitLinux() {
+  log('Installing Git on Linux...');
+  
+  // Detect the Linux distribution
+  let distro = '';
+  if (existsSync('/etc/debian_version')) {
+    distro = 'debian';
+  } else if (existsSync('/etc/fedora-release')) {
+    distro = 'fedora';
+  } else if (existsSync('/etc/redhat-release')) {
+    distro = 'redhat';
+  } else if (existsSync('/etc/arch-release')) {
+    distro = 'arch';
+  } else {
+    log('Unsupported Linux distribution. Please install Git manually.', 'ERROR');
+    return false;
+  }
+  
+  // Install Git based on the distribution
+  if (distro === 'debian') {
+    // For Debian/Ubuntu
+    log('Installing Git via apt...');
+    executeCommand('sudo apt-get install -y git', 'Failed to install Git via apt');
+  } else if (distro === 'fedora') {
+    // For Fedora
+    log('Installing Git via dnf...');
+    executeCommand('sudo dnf install -y git', 'Failed to install Git via dnf');
+  } else if (distro === 'redhat') {
+    // For RHEL/CentOS
+    log('Installing Git via yum...');
+    executeCommand('sudo yum install -y git', 'Failed to install Git via yum');
+  } else if (distro === 'arch') {
+    // For Arch Linux
+    log('Installing Git via pacman...');
+    executeCommand('sudo pacman -S --noconfirm git', 'Failed to install Git via pacman');
+  }
+  
+  // Verify installation
+  const gitVersion = executeCommand('git --version', null, true);
+  
+  if (gitVersion) {
+    log(`Git ${gitVersion} installed successfully`, 'SUCCESS');
+    return true;
+  } else {
+    log('Git installation might have failed, but will continue without Git', 'WARN');
+    return false;
+  }
+}
+
+// Check prerequisites and install if missing
+async function checkAndInstallPrerequisites() {
   log('Checking prerequisites...');
 
   // Check for Node.js and npm
-  const nodeVersion = executeCommand('node --version');
-  if (!nodeVersion) {
-    log('Node.js is not installed or not in PATH', 'ERROR');
-    log('Please download and install Node.js from https://nodejs.org/en/download/', 'INFO');
-    process.exit(1);
+  let nodeVersion = executeCommand('node --version', null, true);
+  let npmVersion = executeCommand('npm --version', null, true);
+  
+  if (!nodeVersion || !npmVersion) {
+    log('Node.js is not installed or not in PATH', 'WARN');
+    log('Attempting to install Node.js automatically...', 'INFO');
+    
+    const nodeInstalled = isMac ? await installNodeJsMac() : await installNodeJsLinux();
+    if (!nodeInstalled) {
+      process.exit(1);
+    }
+    
+    // Refresh versions after installation
+    nodeVersion = executeCommand('node --version', null, true);
+    npmVersion = executeCommand('npm --version', null, true);
   }
+  
   log(`Node.js ${nodeVersion} is installed`, 'SUCCESS');
-
-  const npmVersion = executeCommand('npm --version');
-  if (!npmVersion) {
-    log('npm is not installed or not in PATH', 'ERROR');
-    log('Please install npm, which usually comes with Node.js', 'INFO');
-    process.exit(1);
-  }
   log(`npm ${npmVersion} is installed`, 'SUCCESS');
 
   // Check for Git (optional)
-  const gitVersion = executeCommand('git --version');
+  let gitVersion = executeCommand('git --version', null, true);
+  let gitInstalled = !!gitVersion;
+  
   if (!gitVersion) {
-    log('Git is not installed. We will download the repository as a zip file instead.', 'WARN');
+    log('Git is not installed. Attempting to install Git automatically...', 'WARN');
+    gitInstalled = isMac ? await installGitMac() : await installGitLinux();
+    if (gitInstalled) {
+      gitVersion = executeCommand('git --version', null, true);
+      log(`Git ${gitVersion} is installed`, 'SUCCESS');
+    } else {
+      log('Will download the repository as a zip file instead', 'INFO');
+    }
   } else {
     log(`Git ${gitVersion} is installed`, 'SUCCESS');
   }
@@ -78,7 +275,7 @@ async function checkPrerequisites() {
   }
   log('Claude Desktop is installed', 'SUCCESS');
 
-  return { gitInstalled: !!gitVersion, claudeConfigPath };
+  return { gitInstalled, claudeConfigPath };
 }
 
 // Clone or download repository
@@ -110,10 +307,23 @@ async function getRepository(gitInstalled) {
       // Create directory
       mkdirSync(repoDir, { recursive: true });
       
+      // Check if unzip is available
+      const unzipInstalled = executeCommand('which unzip', null, true);
+      if (!unzipInstalled) {
+        log('unzip utility not found. Attempting to install...', 'WARN');
+        if (isMac) {
+          executeCommand('brew install unzip', 'Failed to install unzip');
+        } else {
+          // Try common package managers
+          executeCommand('sudo apt-get install -y unzip || sudo yum install -y unzip || sudo dnf install -y unzip || sudo pacman -S --noconfirm unzip', 
+            'Failed to install unzip. Please install it manually and try again.');
+        }
+      }
+      
       // Extract with unzip
       executeCommand(
         `unzip -q "${tempZip}" -d "${homedir()}"`,
-        'Failed to extract repository. Please install unzip with "brew install unzip" on macOS or "sudo apt install unzip" on Linux.'
+        'Failed to extract repository. Please make sure unzip is installed.'
       );
       
       // Move contents from extracted directory to target
@@ -213,8 +423,8 @@ async function install() {
   try {
     log('Starting ClaudeComputerCommander-Unlocked installation...');
     
-    // Step 1: Check prerequisites
-    const { gitInstalled, claudeConfigPath } = await checkPrerequisites();
+    // Step 1: Check prerequisites and install if missing
+    const { gitInstalled, claudeConfigPath } = await checkAndInstallPrerequisites();
     
     // Step 2: Clone/download repository
     const repoDir = await getRepository(gitInstalled);
