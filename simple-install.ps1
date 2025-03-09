@@ -249,73 +249,6 @@ if (-not $hasGit) {
         Set-Location $RepoDir
     } catch {
         Write-Host "Failed to download or extract repository: $_" -ForegroundColor Red
-        Write-Host "Will create minimal files to continue..." -ForegroundColor Yellow
-        
-        # Create minimal files
-        # Create dist directory
-        $DistDir = Join-Path $RepoDir "dist"
-        if (-not (Test-Path $DistDir)) {
-            New-Item -ItemType Directory -Path $DistDir -Force | Out-Null
-        }
-        
-        # Create index.js
-        $ServerScript = @"
-// Minimal ClaudeComputerCommander Server (EMERGENCY FALLBACK)
-console.log('ClaudeComputerCommander-Unlocked emergency fallback is running...');
-console.log('This is a minimal version. Please visit the repository for the full version:');
-console.log('https://github.com/jasondsmith72/ClaudeComputerCommander-Unlocked');
-
-const { StdioServerTransport } = require('@modelcontextprotocol/sdk/server/stdio.js');
-
-// Available functions
-const execute_command = async (command) => {
-  console.log(`Executing command: ${command}`);
-  const { exec } = require('child_process');
-  return new Promise((resolve) => {
-    exec(command, (error, stdout, stderr) => {
-      resolve({ output: stdout || stderr, pid: Math.floor(Math.random() * 10000) });
-    });
-  });
-};
-
-// Minimal server implementation
-const server = {
-  connect: async (transport) => {
-    console.log('Server connected');
-    transport.onRequest(async (request) => {
-      console.log('Received request:', request);
-      let response = { error: 'Function not implemented' };
-      
-      if (request.function === 'execute_command') {
-        response = await execute_command(request.parameters.command);
-      }
-      
-      return response;
-    });
-  }
-};
-
-// Start server
-const transport = new StdioServerTransport();
-server.connect(transport)
-  .catch(error => console.error('Server error:', error));
-"@
-        $ServerScript | Out-File -FilePath (Join-Path $DistDir "index.js") -Encoding utf8
-        
-        # Create config.json
-        $ConfigContent = @"
-{
-  "allowedDirectories": ["*"],
-  "allowedCommands": ["*"],
-  "fallbackMode": true
-}
-"@
-        $ConfigContent | Out-File -FilePath (Join-Path $RepoDir "config.json") -Encoding utf8
-        
-        Write-Host "Created minimal server files." -ForegroundColor Yellow
-        
-        # Change to the repository directory
-        Set-Location $RepoDir
     }
 }
 
@@ -361,32 +294,6 @@ if ($hasPackageJson) {
         Write-Host "Dependencies installed and project built successfully." -ForegroundColor Green
     } catch {
         Write-Host "Error installing dependencies: $_" -ForegroundColor Red
-        Write-Host "Will use fallback server instead..." -ForegroundColor Yellow
-    }
-} else {
-    Write-Host "Incomplete repository download. Using minimal server." -ForegroundColor Yellow
-    
-    # Install minimum required packages
-    try {
-        # Create minimal package.json
-        $PackageJsonContent = @"
-{
-  "name": "claude-computer-commander-unlocked-minimal",
-  "version": "1.0.0",
-  "description": "Minimal fallback for ClaudeComputerCommander-Unlocked",
-  "main": "dist/index.js",
-  "dependencies": {
-    "@modelcontextprotocol/sdk": "^0.4.0"
-  }
-}
-"@
-        $PackageJsonContent | Out-File -FilePath (Join-Path $RepoDir "package.json") -Encoding utf8
-        
-        # Install minimum dependencies
-        & $npmCommand install --no-optional
-        Write-Host "Installed minimum required dependencies." -ForegroundColor Yellow
-    } catch {
-        Write-Host "Error installing minimum dependencies: $_" -ForegroundColor Red
     }
 }
 
@@ -414,118 +321,89 @@ if ($UseSystemNode) {
 $IndexPath = Join-Path $RepoDir "dist\index.js"
 
 # Set up Claude config directory and file
-Write-Host "Configuring Claude Desktop..." -ForegroundColor Cyan
+Write-Host "Searching for Claude Desktop config location..." -ForegroundColor Cyan
 
 $ClaudeConfigDir = Join-Path $env:APPDATA "Claude"
-if (-not (Test-Path $ClaudeConfigDir)) {
-    New-Item -ItemType Directory -Path $ClaudeConfigDir -Force | Out-Null
-    Write-Host "Created Claude config directory at: $ClaudeConfigDir" -ForegroundColor Green
-}
-
 $ClaudeConfigFile = Join-Path $ClaudeConfigDir "claude_desktop_config.json"
 
-# Create a backup of the existing config file if it exists
-$BackupCreated = $false
+# Check if the config file exists
 if (Test-Path $ClaudeConfigFile) {
+    Write-Host "Found Claude Desktop config at: $ClaudeConfigFile" -ForegroundColor Green
+    
+    # Create a backup of the existing config file
     try {
         $timestamp = Get-Date -Format "yyyyMMdd-HHmmss"
         $backupConfigFile = "$ClaudeConfigFile.bak-$timestamp"
         Copy-Item -Path $ClaudeConfigFile -Destination $backupConfigFile -Force
         Write-Host "Created backup of Claude config: $backupConfigFile" -ForegroundColor Green
-        $BackupCreated = $true
     } catch {
         Write-Host "Could not create backup of Claude config: $_" -ForegroundColor Yellow
     }
-}
-
-# Create or update the Claude config file
-try {
-    # Prepare the new configuration
-    $mcpConfig = @{
-        "desktopCommander" = @{
-            "command" = $NodePath
-            "args" = @($IndexPath)
-        }
-    }
+} else {
+    Write-Host "Claude Desktop config not found at the expected location." -ForegroundColor Yellow
+    Write-Host "You will need to manually configure Claude Desktop after installation." -ForegroundColor Yellow
     
-    # Create the complete configuration object
-    $newConfig = @{
-        "mcpServers" = $mcpConfig
-    }
-    
-    # Check for existing configuration
-    $existingConfig = $null
-    if (Test-Path $ClaudeConfigFile) {
+    # If directory doesn't exist, create it
+    if (-not (Test-Path $ClaudeConfigDir)) {
         try {
-            $existingConfigJson = Get-Content -Path $ClaudeConfigFile -Raw -ErrorAction Stop
-            $existingConfig = $existingConfigJson | ConvertFrom-Json -ErrorAction Stop
+            New-Item -ItemType Directory -Path $ClaudeConfigDir -Force | Out-Null
+            Write-Host "Created Claude config directory at: $ClaudeConfigDir" -ForegroundColor Green
         } catch {
-            Write-Host "Existing Claude config file could not be parsed: $_" -ForegroundColor Yellow
-            Write-Host "Will create a new configuration file." -ForegroundColor Yellow
-            $existingConfig = $null
+            Write-Host "Failed to create Claude config directory: $_" -ForegroundColor Red
         }
     }
-    
-    # If we have valid existing config, merge with our new config
-    if ($null -ne $existingConfig) {
-        # If mcpServers exists, update it, otherwise add it
-        if (Get-Member -InputObject $existingConfig -Name "mcpServers" -MemberType Properties) {
-            # Convert existingConfig.mcpServers to a mutable object if it's not already
-            if ($null -eq $existingConfig.mcpServers) {
-                $existingConfig.mcpServers = @{}
-            }
-            
-            # Add our desktopCommander config
-            $existingConfig.mcpServers | Add-Member -Name "desktopCommander" -Value $mcpConfig.desktopCommander -MemberType NoteProperty -Force
-        } else {
-            # Add mcpServers property
-            $existingConfig | Add-Member -Name "mcpServers" -Value $mcpConfig -MemberType NoteProperty -Force
-        }
-        
-        # Convert back to JSON
-        $configJson = $existingConfig | ConvertTo-Json -Depth 10
-    } else {
-        # No existing config or invalid, use our new config
-        $configJson = $newConfig | ConvertTo-Json -Depth 10
-    }
-    
-    # Write the config file
-    $configJson | Out-File -FilePath $ClaudeConfigFile -Encoding utf8
-    Write-Host "Successfully updated Claude configuration at: $ClaudeConfigFile" -ForegroundColor Green
-} catch {
-    Write-Host "Error updating Claude configuration: $_" -ForegroundColor Red
-    Write-Host "You will need to manually configure Claude Desktop." -ForegroundColor Yellow
 }
 
-# Create template file containing configuration instructions
+# Generate and display the configuration that needs to be manually added
+$mcpConfigJson = @"
+{
+  "mcpServers": {
+    "desktopCommander": {
+      "command": "$($NodePath.Replace('\','\\'))",
+      "args": [
+        "$($IndexPath.Replace('\','\\'))"
+      ]
+    }
+  }
+}
+"@
+
+Write-Host ""
+Write-Host "========== MANUAL CONFIGURATION INSTRUCTIONS ==========" -ForegroundColor Magenta
+Write-Host ""
+Write-Host "For Claude Desktop to access this tool, you need to manually edit its config file." -ForegroundColor Yellow
+Write-Host ""
+Write-Host "1. Open Claude Desktop application" -ForegroundColor Cyan
+Write-Host "2. Click on Settings (gear icon) in the bottom left" -ForegroundColor Cyan
+Write-Host "3. Go to the 'Developer' tab" -ForegroundColor Cyan
+Write-Host "4. Click 'Edit' next to 'MCP Servers'" -ForegroundColor Cyan
+Write-Host "5. Add the following configuration:" -ForegroundColor Cyan
+Write-Host ""
+Write-Host $mcpConfigJson -ForegroundColor Green
+Write-Host ""
+Write-Host "6. Click 'Save'" -ForegroundColor Cyan
+Write-Host "7. Restart Claude Desktop" -ForegroundColor Cyan
+Write-Host ""
+Write-Host "If Claude Desktop is not yet installed, download it from: https://claude.ai/downloads" -ForegroundColor Yellow
+Write-Host ""
+
+# Create configuration instructions file for reference
 $readmeText = @"
 # ClaudeComputerCommander-Unlocked Configuration Instructions
 
 The installation has completed successfully! 
 
-## Configuration
-Claude Desktop has been automatically configured to use ClaudeComputerCommander-Unlocked.
-Configuration file: $ClaudeConfigFile
-
-If for any reason automatic configuration failed, you can manually configure it by following these steps:
+## Manual Configuration Steps
+For Claude Desktop to access this tool, you need to manually edit its config file:
 
 1. Open Claude Desktop application
 2. Click on Settings (gear icon) in the bottom left
 3. Go to the "Developer" tab
 4. Click "Edit" next to "MCP Servers"
-5. Paste the following configuration:
+5. Add the following configuration:
 
 \`\`\`json
-{
-  "mcpServers": {
-    "desktopCommander": {
-      "command": "$($NodePath.Replace('\', '\\'))",
-      "args": [
-        "$($IndexPath.Replace('\', '\\'))"
-      ]
-    }
-  }
-}
+$mcpConfigJson
 \`\`\`
 
 6. Click "Save"
@@ -536,6 +414,7 @@ If for any reason automatic configuration failed, you can manually configure it 
 - Installation Directory: $RepoDir
 - Node.js Path: $NodePath
 - Index.js Path: $IndexPath
+- Claude Desktop Config Location: $ClaudeConfigFile
 
 ## Using the Commander
 
@@ -551,6 +430,7 @@ If you encounter any issues:
 - Make sure paths in the configuration match your actual installation
 - Verify that Claude Desktop has been restarted
 - Check for any error messages in Claude Desktop logs
+- Make sure you've entered the configuration exactly as shown above
 
 "@
 
@@ -559,32 +439,10 @@ $readmeText | Out-File -FilePath (Join-Path $RepoDir "CONFIGURATION.md") -Encodi
 Write-Host ""
 Write-Host "Installation completed successfully!" -ForegroundColor Green
 Write-Host ""
-if ($UseSystemNode) {
-    Write-Host "Using system-wide Node.js installation." -ForegroundColor Green
-} else {
-    Write-Host "Using portable Node.js just for Claude Commander." -ForegroundColor Yellow
-    Write-Host "For a system-wide installation, re-run this script as Administrator." -ForegroundColor Yellow
-}
-Write-Host ""
 Write-Host "The ClaudeComputerCommander-Unlocked has been installed to:"
 Write-Host $RepoDir -ForegroundColor Cyan
 Write-Host ""
-Write-Host "Claude Desktop has been automatically configured at:"
-Write-Host $ClaudeConfigFile -ForegroundColor Cyan
-if ($BackupCreated) {
-    Write-Host "A backup of your previous configuration was created before changes." -ForegroundColor Green
-}
-Write-Host ""
-Write-Host "*** IMPORTANT: RESTART CLAUDE DESKTOP TO APPLY CHANGES ***" -ForegroundColor Magenta
-Write-Host "If Claude Desktop is already running, please close and restart it." -ForegroundColor Yellow
-Write-Host ""
-Write-Host "You can now ask Claude to:" 
-Write-Host "- Execute terminal commands"
-Write-Host "- Edit files"
-Write-Host "- Manage files"
-Write-Host "- List processes"
-Write-Host ""
-Write-Host "If you encounter any issues, see detailed instructions in:" -ForegroundColor Green 
+Write-Host "Complete configuration instructions have been saved to:"
 Write-Host "$(Join-Path $RepoDir "CONFIGURATION.md")" -ForegroundColor Cyan
 Write-Host ""
 Write-Host "Press any key to exit..."
